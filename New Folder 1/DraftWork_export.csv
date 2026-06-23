@@ -1,0 +1,40 @@
+"start_time","user_id","task_data","user_name","work_type","task_content","saved_date","user_id_number","id","created_date","updated_date","created_by_id","created_by","is_sample"
+"2026-06-23T10:17:36.288Z","6a3a4ac5ccd471ad4fe14549","{""id"":2,""isSaved"":false,""savedAt"":null,""timeTakenSeconds"":null,""fullName"":""XZVXZ"",""phoneNumber"":""VZV"",""emailAddress"":""ZVZVZ"",""aadharNumber"":""ZV Z"",""panNumber"":""VZV"",""qualification"":""ZVZV"",""fullAddress"":""ZVZ"",""city"":""VZV"",""state"":""ZVZVZX"",""pinCode"":""VXZ"",""dob"":""VZVZ"",""gender"":""VZVZ"",""salary"":""VZVZ"",""_chunk_number"":1,""_total_chunks"":1,""_is_chunk"":true}","aman singh","Data Entry","Full Name: XZVXZ
+Phone Number: VZV
+Email Address: ZVZVZ
+Aadhar Number: ZV Z
+Pan Number: VZV
+Qualification: ZVZV
+Full Address: ZVZ
+City: VZV
+State: ZVZVZX
+Pin Code: VXZ
+Dob: VZVZ
+Gender: VZVZ
+Salary: VZVZ","2026-06-23T10:18:03.915Z","6a3a4ac5ccd471ad4fe14549","6a3a5d5b9f100cf6425ce021","2026-06-23T10:18:03.952000","2026-06-23T10:18:03.952000","6a3a4ac5ccd471ad4fe14549","amansinghworkden@gmail.com","false"
+"2026-06-23T10:17:36.288Z","6a3a4ac5ccd471ad4fe14549","{""id"":1,""isSaved"":false,""savedAt"":null,""timeTakenSeconds"":null,""fullName"":""ZXVXZV"",""phoneNumber"":""XZVZVZV"",""emailAddress"":""ZVZVXVZX"",""aadharNumber"":""ZXVZXVXZV"",""panNumber"":"""",""qualification"":""XZVZZVZV"",""fullAddress"":""XZVZVZVZZV"",""city"":""ZXVZXV"",""state"":""ZVZVZV"",""pinCode"":""ZVZ"",""dob"":""VZVZV"",""gender"":""ZXVZ"",""salary"":""VZVZX"",""_chunk_number"":1,""_total_chunks"":1,""_is_chunk"":true}","aman singh","Data Entry","Full Name: ZXVXZV
+Phone Number: XZVZVZV
+Email Address: ZVZVXVZX
+Aadhar Number: ZXVZXVXZV
+Pan Number: N/A
+Qualification: XZVZZVZV
+Full Address: XZVZVZVZZV
+City: ZXVZXV
+State: ZVZVZV
+Pin Code: ZVZ
+Dob: VZVZV
+Gender: ZXVZ
+Salary: VZVZX","2026-06-23T10:17:54.373Z","6a3a4ac5ccd471ad4fe14549","6a3a5d522fd427793637530f","2026-06-23T10:17:54.942000","2026-06-23T10:17:54.942000","6a3a4ac5ccd471ad4fe14549","amansinghworkden@gmail.com","false"
+"2026-06-23T09:00:11.915Z","6a3a4ac5ccd471ad4fe14549","{""id"":1,""isSaved"":false,""savedAt"":null,""timeTakenSeconds"":null,""fullName"":""ddgsd"",""phoneNumber"":""ffdhfdh"",""emailAddress"":""dfhfdhf"",""aadharNumber"":""dhdh"",""panNumber"":""dhfdhd"",""qualification"":""dhdfh"",""fullAddress"":""hdfd"",""city"":""hfdhd"",""state"":""fhdfdh"",""pinCode"":""dhfdhd"",""dob"":""dh"",""gender"":""fdhfdhfd"",""salary"":""dfhdhd"",""_chunk_number"":1,""_total_chunks"":1,""_is_chunk"":true}","aman singh","Data Entry","Full Name: ddgsd
+Phone Number: ffdhfdh
+Email Address: dfhfdhf
+Aadhar Number: dhdh
+Pan Number: dhfdhd
+Qualification: dhdfh
+Full Address: hdfd
+City: hfdhd
+State: fhdfdh
+Pin Code: dhfdhd
+Dob: dh
+Gender: fdhfdhfd
+Salary: dfhdhd","2026-06-23T09:00:24.144Z","6a3a4ac5ccd471ad4fe14549","6a3a4b28a67fdcb2f0664f3f","2026-06-23T09:00:24.557000","2026-06-23T09:00:24.557000","6a3a4ac5ccd471ad4fe14549","amansinghworkden@gmail.com","false"
