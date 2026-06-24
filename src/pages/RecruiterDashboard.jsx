@@ -277,8 +277,8 @@ export default function RecruiterDashboard() {
              r.password === loginForm.password.trim() && r.status === 'active'
       );
       if (!found) { setLoginError("❌ Invalid User ID or Password."); return; }
-      localStorage.setItem('workden_recruiter_id', found.id);
-      localStorage.setItem('workden_user_source', 'recruiter');
+      localStorage.setItem('workden_4_recruiter_id', found.id);
+      localStorage.setItem('workden_4_user_source', 'recruiter');
       setRecruiter(found);
       setIsLoggedIn(true);
       await loadData(found);
@@ -290,8 +290,8 @@ export default function RecruiterDashboard() {
   };
 
   useEffect(() => {
-    const savedId = localStorage.getItem('workden_recruiter_id');
-    const userSource = localStorage.getItem('workden_user_source');
+    const savedId = localStorage.getItem('workden_4_recruiter_id');
+    const userSource = localStorage.getItem('workden_4_user_source');
     if (savedId && userSource === 'recruiter') autoLogin(savedId);
   }, []);
 
@@ -472,8 +472,8 @@ export default function RecruiterDashboard() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('workden_recruiter_id');
-    localStorage.removeItem('workden_user_source');
+    localStorage.removeItem('workden_4_recruiter_id');
+    localStorage.removeItem('workden_4_user_source');
     setIsLoggedIn(false);
     setRecruiter(null);
     setLoginForm({ userId: "", password: "" });

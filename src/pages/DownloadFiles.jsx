@@ -12,7 +12,7 @@ export default function DownloadFiles() {
   const { data: globalSettings = [] } = useQuery({
     queryKey: ['global-settings'],
     queryFn: () => base44.entities.GlobalSettings.list(),
-    initialData: []
+    placeholderData: []
   });
 
   useEffect(() => {
@@ -20,7 +20,7 @@ export default function DownloadFiles() {
   }, []);
 
   const loadUser = async () => {
-    const savedUser = localStorage.getItem('workden_user');
+    const savedUser = localStorage.getItem('workden_4_user');
     if (savedUser) {
       try { setUser(JSON.parse(savedUser)); return; } catch (e) {}
     }

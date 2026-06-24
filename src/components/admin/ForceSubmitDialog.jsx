@@ -287,7 +287,7 @@ export default function ForceSubmitDialog({ open, onClose }) {
       // Get admin name
       let adminName = 'Admin';
       try {
-        const savedUser = localStorage.getItem('workden_user');
+        const savedUser = localStorage.getItem('workden_4_user');
         if (savedUser) { const u = JSON.parse(savedUser); adminName = u.full_name || u.email || 'Admin'; }
       } catch(e) {}
 

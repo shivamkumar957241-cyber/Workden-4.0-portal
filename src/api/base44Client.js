@@ -65,6 +65,14 @@ const createEntityApi = (collectionName) => {
         }));
         events.forEach(event => callback(event));
       });
+    },
+    subscribeDoc: (id, callback) => {
+      const dRef = doc(db, collectionName, id);
+      return onSnapshot(dRef, (snapshot) => {
+        if (snapshot.exists()) {
+          callback({ id: snapshot.id, data: snapshot.data() });
+        }
+      });
     }
   };
 };
@@ -78,7 +86,7 @@ export const base44 = {
           resolve({ id: user.uid, email: user.email, ...user });
         } else {
           try {
-            const savedUser = localStorage.getItem('workden_user');
+            const savedUser = localStorage.getItem('workden_4_user');
             if (savedUser) {
               resolve(JSON.parse(savedUser));
             } else {
@@ -100,6 +108,28 @@ export const base44 = {
     updateMe: async (data) => {
       if (auth.currentUser) {
         await updateProfile(auth.currentUser, data);
+      }
+    }
+  },
+  integrations: {
+    Core: {
+      UploadFile: async ({ file }) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', 'workden_unsigned');
+        
+        const res = await fetch('https://api.cloudinary.com/v1_1/dynrihmjd/auto/upload', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.error?.message || 'Upload failed');
+        }
+        
+        const data = await res.json();
+        return { file_url: data.secure_url };
       }
     }
   },

@@ -43,8 +43,8 @@ export default function Profile() {
 
   const loadUser = async () => {
     try {
-      const userSource = localStorage.getItem('workden_user_source');
-      const savedUserId = localStorage.getItem('workden_login_id');
+      const userSource = localStorage.getItem('workden_4_user_source');
+      const savedUserId = localStorage.getItem('workden_4_login_id');
 
       if (userSource === 'appuser' && savedUserId) {
         // Load from AppUser entity
@@ -61,7 +61,7 @@ export default function Profile() {
 
       // Admin shortcut session
       if (savedUserId === 'SHIVAM') {
-        const savedUser = localStorage.getItem('workden_user');
+        const savedUser = localStorage.getItem('workden_4_user');
         if (savedUser) {
           const u = JSON.parse(savedUser);
           setUser(u);
@@ -78,7 +78,7 @@ export default function Profile() {
       setDocLinks({ pan_card_url: currentUser.pan_card_url || "", aadhaar_url: currentUser.aadhaar_url || "", bank_passbook_url: currentUser.bank_passbook_url || "" });
     } catch (error) {
       // Use localStorage cache
-      const savedUser = localStorage.getItem('workden_user');
+      const savedUser = localStorage.getItem('workden_4_user');
       if (savedUser) {
         const u = JSON.parse(savedUser);
         setUser(u);
@@ -92,7 +92,7 @@ export default function Profile() {
   };
 
   const updateUserRecord = async (data) => {
-    const userSource = localStorage.getItem('workden_user_source');
+    const userSource = localStorage.getItem('workden_4_user_source');
     if (userSource === 'appuser') {
       await base44.entities.AppUser.update(user.id, data);
     } else {
@@ -100,7 +100,7 @@ export default function Profile() {
     }
     // Update localStorage cache
     const updated = { ...user, ...data };
-    localStorage.setItem('workden_user', JSON.stringify(updated));
+    localStorage.setItem('workden_4_user', JSON.stringify(updated));
   };
 
   const handleProfilePictureUpload = async (e) => {

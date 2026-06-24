@@ -29,7 +29,7 @@ export default function TasksPage() {
   // Initialize from localStorage immediately to avoid subscription flash
   const [currentUser, setCurrentUser] = useState(() => {
     try {
-      const saved = localStorage.getItem('workden_user');
+      const saved = localStorage.getItem('workden_4_user');
       return saved ? JSON.parse(saved) : null;
     } catch { return null; }
   });
@@ -55,7 +55,7 @@ export default function TasksPage() {
   const { data: globalSettings = [] } = useQuery({
     queryKey: ['global-settings'],
     queryFn: () => base44.entities.GlobalSettings.list(),
-    initialData: []
+    placeholderData: []
   });
 
   const convertDriveUrl = (url) => {
@@ -100,29 +100,29 @@ export default function TasksPage() {
   }, [refreshTaskLocks]);
 
   const loadData = async () => {
-    const savedUserStr = localStorage.getItem('workden_user');
-    const savedUserSource = localStorage.getItem('workden_user_source');
+    const savedUserStr = localStorage.getItem('workden_4_user');
+    const savedUserSource = localStorage.getItem('workden_4_user_source');
     let user = null;
     if (savedUserSource === 'appuser' && savedUserStr) {
       try {
         user = JSON.parse(savedUserStr);
         setCurrentUser(user);
         const dbUsers = await base44.entities.AppUser.filter({ id: user.id });
-        if (dbUsers?.length > 0) { user = dbUsers[0]; setCurrentUser(user); localStorage.setItem('workden_user', JSON.stringify(user)); }
+        if (dbUsers?.length > 0) { user = dbUsers[0]; setCurrentUser(user); localStorage.setItem('workden_4_user', JSON.stringify(user)); }
       } catch (e) {}
     } else if (savedUserSource === 'user' && savedUserStr) {
       try {
         user = JSON.parse(savedUserStr);
         setCurrentUser(user);
         const dbUsers = await base44.entities.User.filter({ id: user.id });
-        if (dbUsers?.length > 0) { user = dbUsers[0]; setCurrentUser(user); localStorage.setItem('workden_user', JSON.stringify(user)); }
+        if (dbUsers?.length > 0) { user = dbUsers[0]; setCurrentUser(user); localStorage.setItem('workden_4_user', JSON.stringify(user)); }
       } catch (e) {}
     } else {
       try {
         user = await base44.auth.me();
         if (user) {
           setCurrentUser(user);
-          localStorage.setItem('workden_user', JSON.stringify(user));
+          localStorage.setItem('workden_4_user', JSON.stringify(user));
         } else if (savedUserStr) {
           user = JSON.parse(savedUserStr);
           setCurrentUser(user);

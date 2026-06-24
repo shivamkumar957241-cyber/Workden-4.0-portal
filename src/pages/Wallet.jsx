@@ -458,7 +458,7 @@ export default function WalletPage() {
     queryKey: ['wallet-transactions', user?.id],
     queryFn: () => base44.entities.WalletTransaction.filter({ user_id: user?.id }),
     enabled: !!user?.id && walletUnlocked,
-    initialData: [],
+    placeholderData: [],
     refetchInterval: 10000
   });
 
@@ -466,7 +466,7 @@ export default function WalletPage() {
     queryKey: ['withdrawals', user?.id],
     queryFn: () => base44.entities.WithdrawalRequest.filter({ user_id: user?.id }),
     enabled: !!user?.id && walletUnlocked,
-    initialData: [],
+    placeholderData: [],
     refetchInterval: 10000
   });
 
@@ -474,7 +474,7 @@ export default function WalletPage() {
     queryKey: ['proofs', user?.id],
     queryFn: () => base44.entities.Proof.filter({ user_id: user?.id }),
     enabled: !!user?.id && walletUnlocked,
-    initialData: [],
+    placeholderData: [],
     refetchInterval: 10000
   });
 
@@ -485,16 +485,16 @@ export default function WalletPage() {
   }, []);
 
   useEffect(() => {
-    const savedUserStr = localStorage.getItem('workden_user');
-    const userSource = localStorage.getItem('workden_user_source');
+    const savedUserStr = localStorage.getItem('workden_4_user');
+    const userSource = localStorage.getItem('workden_4_user_source');
     if (userSource !== 'appuser' || !savedUserStr) return;
     try {
       const localUser = JSON.parse(savedUserStr);
       if (!localUser?.id) return;
-      const unsubscribe = base44.entities.AppUser.subscribe((event) => {
-        if (event.id === localUser.id && event.data) {
+      const unsubscribe = base44.entities.AppUser.subscribeDoc(localUser.id, (event) => {
+        if (event.data) {
           setUser(event.data);
-          localStorage.setItem('workden_user', JSON.stringify(event.data));
+          localStorage.setItem('workden_4_user', JSON.stringify(event.data));
         }
       });
       return unsubscribe;
@@ -502,9 +502,9 @@ export default function WalletPage() {
   }, []);
 
   const loadUser = async () => {
-    const savedUserStr = localStorage.getItem('workden_user');
-    const userSource = localStorage.getItem('workden_user_source');
-    const savedUserId = localStorage.getItem('workden_login_id');
+    const savedUserStr = localStorage.getItem('workden_4_user');
+    const userSource = localStorage.getItem('workden_4_user_source');
+    const savedUserId = localStorage.getItem('workden_4_login_id');
     
     if (userSource === 'appuser' && savedUserStr) {
       try {
@@ -515,7 +515,7 @@ export default function WalletPage() {
           if (freshUsers && freshUsers.length > 0) {
             const freshUser = freshUsers[0];
             setUser(freshUser);
-            localStorage.setItem('workden_user', JSON.stringify(freshUser));
+            localStorage.setItem('workden_4_user', JSON.stringify(freshUser));
           }
         }
         return;
@@ -543,7 +543,7 @@ export default function WalletPage() {
         const freshUser = allUsers.find(u => u.id === currentUser.id);
         if (freshUser) {
           setUser(freshUser);
-          localStorage.setItem('workden_user', JSON.stringify(freshUser));
+          localStorage.setItem('workden_4_user', JSON.stringify(freshUser));
           if (freshUser?.role === 'admin') setWalletUnlocked(true);
           return;
         }
@@ -558,7 +558,7 @@ export default function WalletPage() {
   const { data: globalSettings = [] } = useQuery({
     queryKey: ['global-settings'],
     queryFn: () => base44.entities.GlobalSettings.list(),
-    initialData: []
+    placeholderData: []
   });
 
   const sortedTxns = [...transactions].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
@@ -602,9 +602,9 @@ export default function WalletPage() {
     }
     const updated = { ...user, wallet_password: newWalletPassword };
     setUser(updated);
-    localStorage.setItem('workden_user', JSON.stringify(updated));
+    localStorage.setItem('workden_4_user', JSON.stringify(updated));
 
-    const userSource = localStorage.getItem('workden_user_source');
+    const userSource = localStorage.getItem('workden_4_user_source');
     if (userSource === 'appuser') {
       try { if (user?.id) await base44.entities.AppUser.update(user.id, { wallet_password: newWalletPassword }); } catch (e) {}
     } else {
@@ -658,7 +658,7 @@ export default function WalletPage() {
       });
 
       const newLockedBalance = Math.max(0, (user?.wallet_balance || 0) - amount);
-      const userSource = localStorage.getItem('workden_user_source');
+      const userSource = localStorage.getItem('workden_4_user_source');
       if (userSource === 'appuser') {
         await base44.entities.AppUser.update(user.id, { wallet_balance: newLockedBalance });
       } else {

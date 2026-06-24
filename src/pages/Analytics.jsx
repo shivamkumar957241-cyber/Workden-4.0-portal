@@ -68,10 +68,10 @@ function RevenueRow({ label, value, type, percent, formula }) {
 const CHART_COLORS = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
 
 export default function Analytics() {
-  const { data: users = [] } = useQuery({ queryKey: ['all-users'], queryFn: () => base44.entities.User.list(), initialData: [] });
-  const { data: appUsers = [] } = useQuery({ queryKey: ['all-app-users'], queryFn: () => base44.entities.AppUser.list('-created_date', 300), initialData: [] });
-  const { data: proofs = [] } = useQuery({ queryKey: ['all-proofs'], queryFn: () => base44.entities.Proof.list('-created_date'), initialData: [] });
-  const { data: recruiters = [] } = useQuery({ queryKey: ['recruiters'], queryFn: () => base44.entities.Recruiter.list(), initialData: [] });
+  const { data: users = [] } = useQuery({ queryKey: ['all-users'], queryFn: () => base44.entities.User.list(), placeholderData: [] });
+  const { data: appUsers = [] } = useQuery({ queryKey: ['all-app-users'], queryFn: () => base44.entities.AppUser.list('-created_date', 300), placeholderData: [] });
+  const { data: proofs = [] } = useQuery({ queryKey: ['all-proofs'], queryFn: () => base44.entities.Proof.list('-created_date'), placeholderData: [] });
+  const { data: recruiters = [] } = useQuery({ queryKey: ['recruiters'], queryFn: () => base44.entities.Recruiter.list(), placeholderData: [] });
 
   // ── Merged user list ──────────────────────────────────────────────────────
   const allUsers = useMemo(() => [
