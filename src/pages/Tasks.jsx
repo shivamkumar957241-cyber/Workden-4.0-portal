@@ -207,38 +207,26 @@ export default function TasksPage() {
     setSubmitting(true);
     try {
       const existingPayments = await base44.entities.SubscriptionPayment.filter({ user_id: currentUser.id });
-      const pendingPayment = existingPayments?.find(p => p.status === 'pending');
-        
-      if (pendingPayment) {
-        await base44.entities.SubscriptionPayment.update(pendingPayment.id, {
+      
+      // Sort to get the most recent payment if there are multiple
+      const sortedPayments = existingPayments?.sort((a, b) => new Date(b.created_date || 0) - new Date(a.created_date || 0));
+      const latestPayment = sortedPayments?.[0];
+
+      if (latestPayment) {
+        // Since the user is on the payment screen, their account is NOT subscribed.
+        // We will update their existing payment (whether approved, pending, or rejected) 
+        // with the new details and push it back to 'pending' for the Admin to review.
+        await base44.entities.SubscriptionPayment.update(latestPayment.id, {
           user_name: formData.name, user_email: formData.email,
           mobile: formData.mobile, city: formData.city, payment_method: formData.paymentMethod,
           transaction_id: formData.transactionId, paid_name: formData.paidName,
-          screenshot_url: formData.screenshotFile || ""
+          screenshot_url: formData.screenshotFile || "",
+          status: "pending"
         });
         setSubmitted(true);
         setSubmitting(false); 
         setShowPaymentDialog(false); 
         return;
-      } 
-      
-      const approvedPayment = existingPayments?.find(p => p.status === 'approved');
-      if (approvedPayment) {
-        if (!currentUser?.is_subscribed) {
-          try {
-            await base44.entities.AppUser.update(currentUser.id, { is_subscribed: true });
-            const updatedUser = { ...currentUser, is_subscribed: true };
-            setCurrentUser(updatedUser);
-            localStorage.setItem('workden_4_user', JSON.stringify(updatedUser));
-            alert("Your previous payment was approved! We have activated your subscription. Please wait while the page refreshes.");
-            window.location.reload();
-          } catch (err) {
-            alert("Your payment is approved but we couldn't update your status. Please contact support.");
-          }
-        } else {
-          alert("You have already submitted this form and it was approved. If you need help, contact support.");
-        }
-        setSubmitting(false); setShowPaymentDialog(false); return;
       }
 
       await base44.entities.SubscriptionPayment.create({
