@@ -21,31 +21,6 @@ const generateTxnId = () => 'TXN' + Date.now() + Math.random().toString(36).subs
 
 export default function AdminPanel() {
   const queryClient = useQueryClient();
-  
-  useEffect(() => {
-    const restoreYogendra = async () => {
-      try {
-        const existing = await base44.entities.SubscriptionPayment.filter({ transaction_id: "834815645611" });
-        if (existing.length === 0) {
-          await base44.entities.SubscriptionPayment.create({
-            user_name: "YOGENDRA MEENA",
-            user_email: "rehmanizhar16@gmail.com",
-            mobile: "6375595939",
-            city: "KOTA",
-            payment_method: "QR",
-            transaction_id: "834815645611",
-            paid_name: "PHONEPAY",
-            amount: 999,
-            status: "approved",
-            created_date: new Date(Date.now() - 3600000).toISOString(),
-            user_id: "RESTORED_YOGENDRA"
-          });
-          queryClient.invalidateQueries({ queryKey: ['subscription-payments'] });
-        }
-      } catch (e) { console.error("Restore failed", e); }
-    };
-    restoreYogendra();
-  }, []);
 
   const [activeTab, setActiveTab] = useState("users");
   const [taskDialog, setTaskDialog] = useState(false);
