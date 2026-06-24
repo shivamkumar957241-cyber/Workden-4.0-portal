@@ -252,6 +252,7 @@ export default function DataEntry() {
         };
         stopTaskActivity(currentSessionId, 'ABANDONED', behaviorData).catch(() => {});
         stopTracking(false, true).catch(() => {});
+          setTaskLocked(TASK_NAME); // Auto-lock on back
 
         sessionStorage.removeItem(`task_start_${TASK_NAME}`);
         sessionStorage.removeItem(`task_session_${TASK_NAME}`);
