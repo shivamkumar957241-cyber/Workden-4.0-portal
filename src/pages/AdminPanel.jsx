@@ -368,10 +368,17 @@ export default function AdminPanel() {
     const now = new Date();
     return subscriptionPayments.filter(payment => {
       const searchLower = subscriptionSearch.toLowerCase();
+      const matchedUser = users.find(u => u.id === payment.user_id) || appUsers.find(au => au.id === payment.user_id);
+      
       const matchesSearch = !subscriptionSearch || 
         payment.user_name?.toString()?.toLowerCase()?.includes(searchLower) || 
         payment.mobile?.toString()?.toLowerCase()?.includes(searchLower) ||
-        payment.transaction_id?.toString()?.toLowerCase()?.includes(searchLower);
+        payment.transaction_id?.toString()?.toLowerCase()?.includes(searchLower) ||
+        matchedUser?.full_name?.toString()?.toLowerCase()?.includes(searchLower) ||
+        matchedUser?.name?.toString()?.toLowerCase()?.includes(searchLower) ||
+        matchedUser?.login_user_id?.toString()?.toLowerCase()?.includes(searchLower) ||
+        matchedUser?.user_id?.toString()?.toLowerCase()?.includes(searchLower) ||
+        matchedUser?.email?.toString()?.toLowerCase()?.includes(searchLower);
       
       if (!matchesSearch) return false;
       
@@ -1323,13 +1330,13 @@ export default function AdminPanel() {
                   <TableHeader><TableRow><TableHead>User</TableHead><TableHead>Mobile</TableHead><TableHead>Txn ID</TableHead><TableHead>Screenshot</TableHead><TableHead>Amount</TableHead><TableHead>Date & Time</TableHead><TableHead>Status</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
                   <TableBody>
                    {filteredSubscriptionPayments.map(payment => {
-                      const user = users.find(u => u.id === payment.user_id);
+                      const user = users.find(u => u.id === payment.user_id) || appUsers.find(u => u.id === payment.user_id);
                       return (
                         <TableRow key={payment.id}>
                           <TableCell>
                             <div>
                               <p className="font-medium">{payment.user_name}</p>
-                              <p className="text-xs">{user?.user_id}</p>
+                              <p className="text-xs">{user?.user_id || user?.login_user_id || user?.email}</p>
                               <p className="text-xs text-gray-600">City: {payment.city || 'N/A'}</p>
                             </div>
                           </TableCell>
