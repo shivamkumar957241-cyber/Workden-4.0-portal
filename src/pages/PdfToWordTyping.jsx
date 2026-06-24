@@ -4,7 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Save, Send } from "lucide-react";
 import LiveActivityBar from "@/components/LiveActivityBar";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import TaskPreviewScreen from "@/components/TaskPreviewScreen";
@@ -175,7 +175,8 @@ const PAGES = [
 ];
 
 export default function PdfToWordTyping() {
-  const taskSlot = parseInt(new URLSearchParams(window.location.search).get('task') || '1');
+  const location = useLocation();
+  const taskSlot = parseInt(new URLSearchParams(location.search).get('task') || '1');
   const TASK_NAME = `PDF to Word Typing Task ${taskSlot}`;
   const [user, setUser] = useState(null);
   const [items, setItems] = useState([]);
@@ -270,7 +271,7 @@ export default function PdfToWordTyping() {
           await base44.entities.ActiveTask.update(existing[0].id, { status: 'locked', locked_until: lockUntil.toISOString(), lock_reason: 'incomplete' });
         }
       } catch(e) {}
-    });
+    }, TASK_NAME);
   };
 
   // 60/30/15 minute alerts

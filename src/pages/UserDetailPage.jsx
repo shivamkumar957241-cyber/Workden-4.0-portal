@@ -8,11 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, CheckCircle, XCircle, Eye, FileText, Calendar, Search } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link , useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
 export default function UserDetailPage() {
-  const urlParams = new URLSearchParams(window.location.search);
+  const location = useLocation();
+  const urlParams = new URLSearchParams(location.search);
   const userId = urlParams.get('userId');
   
   const [filePreviewDialog, setFilePreviewDialog] = useState(false);

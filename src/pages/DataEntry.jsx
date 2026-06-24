@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Save, Send } from "lucide-react";
 import LiveActivityBar from "@/components/LiveActivityBar";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import TaskPreviewScreen from "@/components/TaskPreviewScreen";
@@ -48,7 +48,8 @@ function createEntry(i) {
 }
 
 export default function DataEntry() {
-  const taskSlot = parseInt(new URLSearchParams(window.location.search).get('task') || '1');
+  const location = useLocation();
+  const taskSlot = parseInt(new URLSearchParams(location.search).get('task') || '1');
   const TASK_NAME = `Data Entry Task ${taskSlot}`;
   const [user, setUser] = useState(null);
   const [entries, setEntries] = useState([]);
@@ -308,10 +309,10 @@ export default function DataEntry() {
             status: 'locked',
             locked_until: lockUntil.toISOString(),
             lock_reason: 'incomplete',
-          });
+          }, TASK_NAME);
         }
       } catch (e) {}
-    });
+    }, TASK_NAME);
   };
 
   // ─── Proper exit (user clicks back arrow with confirmation) ───────────────

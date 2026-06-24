@@ -19,7 +19,7 @@ import {
   Play,
   Lock
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link , useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import moment from "moment";
 import TaskTimeLockChecker from "../components/TaskTimeLockChecker";
@@ -27,6 +27,7 @@ import TaskLeaveWarning from "../components/TaskLeaveWarning";
 import TaskTimeLockScreen from "../components/TaskTimeLockScreen";
 
 export default function TaskWorkspace() {
+  const location = useLocation();
   const [user, setUser] = useState(null);
   const [task, setTask] = useState(null);
   const [activeTask, setActiveTask] = useState(null);
@@ -48,7 +49,7 @@ export default function TaskWorkspace() {
   const [pendingLeaveCallback, setPendingLeaveCallback] = useState(null);
   const timerRef = useRef(null);
 
-  const urlParams = new URLSearchParams(window.location.search);
+  const urlParams = new URLSearchParams(location.search);
   const taskId = urlParams.get('taskId');
 
   // Check if copy-paste should be ENABLED (only for Copy-Paste Work task)

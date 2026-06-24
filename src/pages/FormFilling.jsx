@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Save, ArrowLeft, Send } from "lucide-react";
 import LiveActivityBar from "@/components/LiveActivityBar";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import TaskPreviewScreen from "@/components/TaskPreviewScreen";
 import TaskTimeGuard from "@/components/TaskTimeGuard";
@@ -50,7 +50,8 @@ function createForm(i) {
 }
 
 export default function FormFilling() {
-  const taskSlot = parseInt(new URLSearchParams(window.location.search).get('task') || '1');
+  const location = useLocation();
+  const taskSlot = parseInt(new URLSearchParams(location.search).get('task') || '1');
   const TASK_NAME = `Form Filling Task ${taskSlot}`;
   const [user, setUser] = useState(null);
   const [forms, setForms] = useState([]);
@@ -179,7 +180,7 @@ export default function FormFilling() {
           await base44.entities.ActiveTask.update(existing[0].id, { status: 'locked', locked_until: lockUntil.toISOString(), lock_reason: 'incomplete' });
         }
       } catch(e) {}
-    });
+    }, TASK_NAME);
   };
 
   const formatTime = (s) => {

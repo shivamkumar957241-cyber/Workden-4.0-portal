@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Users, CheckCircle, BarChart3, LogOut, Loader2, Lock, Shield } from "lucide-react";
 
 export default function RecruiterPortal() {
+  const location = useLocation();
   const [authenticated, setAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [recruiterData, setRecruiterData] = useState(null);
@@ -17,7 +18,7 @@ export default function RecruiterPortal() {
   const [dateFilter, setDateFilter] = useState("all");
   const [customDateRange, setCustomDateRange] = useState({ start: "", end: "" });
 
-  const urlParams = new URLSearchParams(window.location.search);
+  const urlParams = new URLSearchParams(location.search);
   const urlId = urlParams.get('id') || urlParams.get('url');
 
   const { data: users = [] } = useQuery({ 

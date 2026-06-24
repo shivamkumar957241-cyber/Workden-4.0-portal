@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { appParams } from '@/lib/app-params';
+import { performLogout } from '@/pages/UserLogin';
 
 const AuthContext = createContext();
 
@@ -59,6 +60,8 @@ export const AuthProvider = ({ children }) => {
   const logout = async (shouldRedirect = true) => {
     setUser(null);
     setIsAuthenticated(false);
+    
+    await performLogout();
     
     if (shouldRedirect) {
       await base44.auth.logout(window.location.href);

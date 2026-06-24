@@ -472,9 +472,11 @@ export default function RecruiterDashboard() {
     return `${h > 0 ? h + 'h ' : ''}${m}m ${s}s`;
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('workden_4_recruiter_id');
-    localStorage.removeItem('workden_4_user_source');
+  const handleLogout = async () => {
+    try {
+      const { performLogout } = await import('./UserLogin.jsx');
+      await performLogout();
+    } catch (e) { console.error("Logout error", e); }
     setIsLoggedIn(false);
     setRecruiter(null);
     setLoginForm({ userId: "", password: "" });

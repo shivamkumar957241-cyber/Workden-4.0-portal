@@ -166,6 +166,7 @@ function generateAllCaptchas() {
 }
 
 export default function CaptchaFilling() {
+  const location = useLocation();
   const [user, setUser] = useState(null);
   const [captchas, setCaptchas] = useState(() => generateAllCaptchas());
   const [savedCount, setSavedCount] = useState(0);
@@ -250,7 +251,7 @@ export default function CaptchaFilling() {
           await base44.entities.ActiveTask.update(existing[0].id, { status: 'locked', locked_until: lockUntil.toISOString(), lock_reason: 'incomplete' });
         }
       } catch(e) {}
-    });
+    }, TASK_NAME);
   };
 
   const handleInputChange = (id, value) => {
