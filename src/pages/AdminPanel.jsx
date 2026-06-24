@@ -1409,27 +1409,49 @@ export default function AdminPanel() {
                     <GraduationCap className="w-6 h-6" />
                     Training Videos Management
                   </CardTitle>
-                  <Button onClick={() => {
-                    const taskName = prompt("Enter task name or topic (e.g., Data Entry, General Training):");
-                    if (!taskName) return;
-                    const videoTitle = prompt("Enter video title:");
-                    if (!videoTitle) return;
-                    const videoUrl = prompt("Enter video URL (YouTube, Google Drive):");
-                    if (!videoUrl) return;
-                    base44.entities.TrainingVideo.create({
-                      task_name: taskName,
-                      video_title: videoTitle,
-                      video_url: videoUrl
-                    }).then(() => {
-                      queryClient.invalidateQueries({ queryKey: ['training-videos'] });
-                      alert('✅ Video added!');
-                    });
-                  }} className="bg-white/20 hover:bg-white/30">
-                    <Plus className="w-4 h-4 mr-2" />Add Video
-                  </Button>
                 </div>
               </CardHeader>
               <CardContent className="p-6">
+                <div className="flex flex-col gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200 mb-6 shadow-sm">
+                  <h3 className="font-bold text-amber-800 flex items-center gap-2"><Plus className="w-4 h-4"/> Add New Video</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <Label className="text-xs text-amber-900 font-bold mb-1 block">Select Task / Topic</Label>
+                      <select id="add_video_task" className="w-full h-9 border rounded-md px-2 text-sm bg-white" onChange={(e) => {
+                        document.getElementById('add_video_custom_task').style.display = e.target.value === 'custom' ? 'block' : 'none';
+                      }}>
+                        {tasks.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
+                        <option value="General Training">General Training</option>
+                        <option value="custom">Other (Type Custom)</option>
+                      </select>
+                      <Input id="add_video_custom_task" placeholder="Type custom topic" className="w-full h-9 border rounded-md px-2 text-sm mt-2 bg-white" style={{display: 'none'}} />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-amber-900 font-bold mb-1 block">Video Title</Label>
+                      <Input id="add_video_title" placeholder="e.g. How to do Data Entry" className="bg-white" />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-amber-900 font-bold mb-1 block">Video URL</Label>
+                      <Input id="add_video_url" placeholder="YouTube or Drive link" className="bg-white" />
+                    </div>
+                  </div>
+                  <Button onClick={() => {
+                    const sel = document.getElementById('add_video_task').value;
+                    const custom = document.getElementById('add_video_custom_task').value;
+                    const taskName = sel === 'custom' ? custom : sel;
+                    const videoTitle = document.getElementById('add_video_title').value;
+                    const videoUrl = document.getElementById('add_video_url').value;
+                    if (!taskName || !videoTitle || !videoUrl) return alert('Please fill all fields');
+                    base44.entities.TrainingVideo.create({ task_name: taskName, video_title: videoTitle, video_url: videoUrl }).then(() => {
+                      queryClient.invalidateQueries({ queryKey: ['training-videos'] });
+                      document.getElementById('add_video_title').value = '';
+                      document.getElementById('add_video_url').value = '';
+                      alert('Video added successfully! It will now show up in the Training Module.');
+                    });
+                  }} className="bg-amber-600 hover:bg-amber-700 text-white w-full md:w-auto mt-2">
+                    <Plus className="w-4 h-4 mr-2" />Add Video
+                  </Button>
+                </div>
                 {trainingVideos.length > 0 ? (
                   <div className="space-y-3">
                     {trainingVideos.map(video => (
