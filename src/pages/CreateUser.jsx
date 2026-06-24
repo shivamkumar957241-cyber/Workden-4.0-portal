@@ -567,6 +567,7 @@ export default function CreateUser() {
       city: form.city.trim(),
       qualification: form.qualification.trim(),
       role: "user", is_subscribed: false, status: "active",
+      free_unlock: false, training_access: false,
       assigned_tasks: [], wallet_balance: 0, total_earnings: 0,
       gamification_points: 0, badge: "Bronze", last_login: null,
       assigned_recruiter_id: null,

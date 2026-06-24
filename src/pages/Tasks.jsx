@@ -212,7 +212,7 @@ export default function TasksPage() {
       const settings = await base44.entities.GlobalSettings.filter({
         setting_key: "task_entry_notification_enabled"
       });
-      if (settings.length > 0 && settings[0].setting_value === 'true' && !taskEntryNotificationShown) {
+      if (settings.length > 0 && settings[0].setting_value === 'true' && !taskEntryNotificationShown && currentUser?.is_subscribed) {
         setShowTaskEntryNotification(true);
         setTaskEntryNotificationShown(true);
       }
