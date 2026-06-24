@@ -220,8 +220,11 @@ export default function TasksPage() {
         setSubmitting(false); 
         setShowPaymentDialog(false); 
         return;
-      } else if (existingPayments?.length > 0) {
-        alert("You have already submitted this form and it was processed. If you need help, contact support.");
+      } 
+      
+      const approvedPayment = existingPayments?.find(p => p.status === 'approved');
+      if (approvedPayment) {
+        alert("You have already submitted this form and it was approved. If you need help, contact support.");
         setSubmitting(false); setShowPaymentDialog(false); return;
       }
 
