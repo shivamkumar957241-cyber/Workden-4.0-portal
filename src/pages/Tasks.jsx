@@ -35,7 +35,16 @@ export default function TasksPage() {
   });
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [paymentStep, setPaymentStep] = useState(1);
-  const [formData, setFormData] = useState({ name: "", mobile: "", email: "", city: "", paymentMethod: "", transactionId: "", paidName: "", screenshotFile: null });
+  const [formData, setFormData] = useState({ 
+    name: currentUser?.full_name || currentUser?.name || "", 
+    mobile: currentUser?.phone || currentUser?.mobile || "", 
+    email: currentUser?.email || "", 
+    city: currentUser?.city || "", 
+    paymentMethod: "", 
+    transactionId: "", 
+    paidName: "", 
+    screenshotFile: null 
+  });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
@@ -140,7 +149,13 @@ export default function TasksPage() {
     } catch (e) {}
 
     if (user) {
-      setFormData(prev => ({ ...prev, name: user.full_name || "", email: user.email || "", mobile: user.phone || "" }));
+      setFormData(prev => ({ 
+        ...prev, 
+        name: prev.name || user.full_name || user.name || "", 
+        email: prev.email || user.email || "", 
+        mobile: prev.mobile || user.phone || user.mobile || "",
+        city: prev.city || user.city || ""
+      }));
       // Load per-slot lock status for each category
       refreshTaskLocks();
     }
@@ -442,11 +457,11 @@ export default function TasksPage() {
               <Button onClick={() => setPaymentStep(2)} className="w-full h-11 bg-gray-900 hover:bg-gray-800">I've Made the Payment →</Button>
             </div>
           ) : (
-            <form onSubmit={handleSubmitPayment} className="space-y-3 py-2">
-              <div><Label>Full Name *</Label><Input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="Your full name" required /></div>
-              <div><Label>Mobile Number *</Label><Input value={formData.mobile} onChange={e => setFormData({...formData, mobile: e.target.value})} placeholder="Mobile number" required /></div>
-              <div><Label>Email Address *</Label><Input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} placeholder="Email" required /></div>
-              <div><Label>City *</Label><Input value={formData.city || ""} onChange={e => setFormData({...formData, city: e.target.value})} placeholder="Your city" required /></div>
+            <form onSubmit={handleSubmitPayment} className="space-y-3 py-2" autoComplete="off">
+              <div><Label>Full Name *</Label><Input autoComplete="new-password" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="Your full name" required /></div>
+              <div><Label>Mobile Number *</Label><Input autoComplete="new-password" value={formData.mobile} onChange={e => setFormData({...formData, mobile: e.target.value})} placeholder="Mobile number" required /></div>
+              <div><Label>Email Address *</Label><Input type="email" autoComplete="new-password" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} placeholder="Email" required /></div>
+              <div><Label>City *</Label><Input autoComplete="new-password" value={formData.city || ""} onChange={e => setFormData({...formData, city: e.target.value})} placeholder="Your city" required /></div>
               <div>
                 <Label>Payment Method *</Label>
                 <select value={formData.paymentMethod} onChange={e => setFormData({...formData, paymentMethod: e.target.value})} className="w-full p-2 border rounded-md text-sm" required>
