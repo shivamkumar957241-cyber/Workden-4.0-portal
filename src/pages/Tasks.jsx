@@ -207,16 +207,11 @@ export default function TasksPage() {
     setSubmitting(true);
     try {
       const existingPayments = await base44.entities.SubscriptionPayment.filter({ user_id: currentUser.id });
-      
-      // Sort to get the most recent payment if there are multiple
-      const sortedPayments = existingPayments?.sort((a, b) => new Date(b.created_date || 0) - new Date(a.created_date || 0));
-      const latestPayment = sortedPayments?.[0];
+      const pendingPayment = existingPayments?.find(p => p.status === 'pending');
 
-      if (latestPayment) {
-        // Since the user is on the payment screen, their account is NOT subscribed.
-        // We will update their existing payment (whether approved, pending, or rejected) 
-        // with the new details and push it back to 'pending' for the Admin to review.
-        await base44.entities.SubscriptionPayment.update(latestPayment.id, {
+      if (pendingPayment) {
+        // If they have a pending payment, just update it with new details
+        await base44.entities.SubscriptionPayment.update(pendingPayment.id, {
           user_name: formData.name, user_email: formData.email,
           mobile: formData.mobile, city: formData.city, payment_method: formData.paymentMethod,
           transaction_id: formData.transactionId, paid_name: formData.paidName,
@@ -229,6 +224,8 @@ export default function TasksPage() {
         return;
       }
 
+      // If they have no pending payment (e.g., previous was approved or rejected), 
+      // create a completely NEW payment record so the history is preserved.
       await base44.entities.SubscriptionPayment.create({
         user_id: currentUser.id, user_name: formData.name, user_email: formData.email,
         mobile: formData.mobile, city: formData.city, payment_method: formData.paymentMethod,
