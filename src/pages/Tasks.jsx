@@ -207,10 +207,24 @@ export default function TasksPage() {
     setSubmitting(true);
     try {
       const existingPayments = await base44.entities.SubscriptionPayment.filter({ user_id: currentUser.id });
-      if (existingPayments?.length > 0) {
-        alert("⚠️ You have already submitted this form. Admin will verify your payment soon.");
+      const pendingPayment = existingPayments?.find(p => p.status === 'pending');
+        
+      if (pendingPayment) {
+        await base44.entities.SubscriptionPayment.update(pendingPayment.id, {
+          user_name: formData.name, user_email: formData.email,
+          mobile: formData.mobile, city: formData.city, payment_method: formData.paymentMethod,
+          transaction_id: formData.transactionId, paid_name: formData.paidName,
+          screenshot_url: formData.screenshotFile || ""
+        });
+        setSubmitted(true);
+        setSubmitting(false); 
+        setShowPaymentDialog(false); 
+        return;
+      } else if (existingPayments?.length > 0) {
+        alert("You have already submitted this form and it was processed. If you need help, contact support.");
         setSubmitting(false); setShowPaymentDialog(false); return;
       }
+
       await base44.entities.SubscriptionPayment.create({
         user_id: currentUser.id, user_name: formData.name, user_email: formData.email,
         mobile: formData.mobile, city: formData.city, payment_method: formData.paymentMethod,

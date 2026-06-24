@@ -105,7 +105,7 @@ export default function AdminPanel() {
   const { data: subscriptionPayments = [] } = useQuery({ queryKey: ['subscription-payments'], queryFn: () => base44.entities.SubscriptionPayment.list('-created_date'), placeholderData: [], refetchInterval: 10000 });
   const { data: trainingVideos = [] } = useQuery({ queryKey: ['training-videos'], queryFn: () => base44.entities.TrainingVideo.list(), placeholderData: [] });
   const { data: recruiters = [] } = useQuery({ queryKey: ['recruiters'], queryFn: () => base44.entities.Recruiter.list(), placeholderData: [], refetchInterval: 10000 });
-  const { data: appUsers = [] } = useQuery({ queryKey: ['all-app-users'], queryFn: () => base44.entities.AppUser.list('-created_date', 200), placeholderData: [], refetchInterval: 5000 });
+  const { data: appUsers = [] } = useQuery({ queryKey: ['all-app-users'], queryFn: () => base44.entities.AppUser.list('-created_date'), placeholderData: [], refetchInterval: 5000 });
   const { data: taskActivityLogs = [] } = useQuery({ queryKey: ['task-activity'], queryFn: () => base44.entities.TaskActivityLog.list('-start_time'), placeholderData: [], refetchInterval: 8000 });
   const { data: loginAttempts = [] } = useQuery({ queryKey: ['login-attempts'], queryFn: () => base44.entities.LoginAttempt.list('-login_time'), placeholderData: [], refetchInterval: 5000 });
   const { data: savedReplies = [] } = useQuery({ queryKey: ['saved-replies'], queryFn: () => base44.entities.SavedRejectionReply.list('order'), placeholderData: [] });
