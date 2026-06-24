@@ -224,7 +224,20 @@ export default function TasksPage() {
       
       const approvedPayment = existingPayments?.find(p => p.status === 'approved');
       if (approvedPayment) {
-        alert("You have already submitted this form and it was approved. If you need help, contact support.");
+        if (!currentUser?.is_subscribed) {
+          try {
+            await base44.entities.AppUser.update(currentUser.id, { is_subscribed: true });
+            const updatedUser = { ...currentUser, is_subscribed: true };
+            setCurrentUser(updatedUser);
+            localStorage.setItem('workden_4_user', JSON.stringify(updatedUser));
+            alert("Your previous payment was approved! We have activated your subscription. Please wait while the page refreshes.");
+            window.location.reload();
+          } catch (err) {
+            alert("Your payment is approved but we couldn't update your status. Please contact support.");
+          }
+        } else {
+          alert("You have already submitted this form and it was approved. If you need help, contact support.");
+        }
         setSubmitting(false); setShowPaymentDialog(false); return;
       }
 
