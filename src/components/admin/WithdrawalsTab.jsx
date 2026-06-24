@@ -101,16 +101,18 @@ export default function WithdrawalsTab({ withdrawals, users, appUsers, pendingWi
             <TableRow>
               <TableHead>User</TableHead>
               <TableHead>Amount</TableHead>
-              <TableHead>Bank</TableHead>
-              <TableHead>Date & Time (IST)</TableHead>
-              <TableHead>Status / TXN</TableHead>
+              <TableHead>Method & Details</TableHead>
+              <TableHead>Request Date (IST)</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>UTR / Txn ID</TableHead>
+              <TableHead>Approved Date (IST)</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredWithdrawals.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-gray-500 py-12">
+                <TableCell colSpan={8} className="text-center text-gray-500 py-12">
                   No withdrawal records found
                 </TableCell>
               </TableRow>
@@ -123,38 +125,65 @@ export default function WithdrawalsTab({ withdrawals, users, appUsers, pendingWi
                     <TableCell>
                       <div>
                         <p className="font-medium">{user?.full_name || w.user_name || 'Unknown'}</p>
-                        <p className="text-xs text-gray-500">{user?.phone || user?.mobile || '-'}</p>
-                        <p className="text-xs text-gray-400">{user?.email || '-'}</p>
+                        <p className="text-xs text-gray-500">{user?.email || w.user_email || '-'}</p>
+                        <p className="text-xs text-gray-400">{user?.phone || user?.mobile || '-'}</p>
                       </div>
                     </TableCell>
-                    <TableCell className="font-bold text-green-600">₹{w.amount}</TableCell>
+                    <TableCell className="font-bold text-green-600 text-lg">₹{w.amount}</TableCell>
                     <TableCell className="text-xs">
-                      <p>{w.bank_name}</p>
-                      <p>{w.account_number}</p>
-                      <p>{w.ifsc_code}</p>
+                      {w.method === 'UPI' || w.upi_id ? (
+                        <div className="space-y-0.5">
+                          <p className="font-semibold flex items-center gap-1">📱 UPI</p>
+                          <p className="text-gray-500">UPI ID:</p>
+                          <p className="text-blue-600 font-medium">{w.upi_id}</p>
+                          <a href="#" className="text-blue-500 underline text-[10px]">View QR</a>
+                        </div>
+                      ) : (
+                        <div className="space-y-0.5">
+                          <p className="font-semibold flex items-center gap-1">🏦 Bank Transfer</p>
+                          <p className="text-gray-600">{w.bank_name}</p>
+                          <p className="text-gray-600">A/c: {w.account_number}</p>
+                          <p className="text-gray-600">IFSC: {w.ifsc_code}</p>
+                          <p className="text-gray-600">Holder: {w.account_holder}</p>
+                        </div>
+                      )}
                     </TableCell>
-                    <TableCell className="text-xs whitespace-nowrap">
-                      <p className="font-semibold">{formatIST(w.requested_date || w.created_date)}</p>
+                    <TableCell className="text-xs">
+                      <div className="space-y-0.5">
+                        <p>{formatIST(w.requested_date || w.created_date).split(',')[0]},</p>
+                        <p>{formatIST(w.requested_date || w.created_date).split(',')[1]?.trim()}</p>
+                        <p className="text-[10px] text-gray-400 mt-1">IST (GMT+5:30)</p>
+                      </div>
                     </TableCell>
                     <TableCell>
-                      <div className="space-y-1">
-                        <Badge variant={w.status === 'completed' ? 'default' : w.status === 'rejected' ? 'destructive' : 'secondary'}>
-                          {w.status}
-                        </Badge>
-                        {w.txn_id && (
-                          <p className="text-xs text-green-700 font-mono bg-green-50 px-1.5 py-0.5 rounded border border-green-200">TXN: {w.txn_id}</p>
-                        )}
+                      <Badge variant={w.status === 'completed' ? 'default' : w.status === 'rejected' ? 'destructive' : 'secondary'} className={w.status === 'completed' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}>
+                        {w.status === 'completed' ? '✅ Approved' : w.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {w.txn_id ? (
+                        <p className="text-sm text-blue-700 font-bold">{w.txn_id}</p>
+                      ) : <p className="text-gray-400">-</p>}
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      <div className="space-y-0.5 text-gray-500">
+                        {w.approved_date ? (
+                          <>
+                            <p>{formatIST(w.approved_date).split(',')[0]},</p>
+                            <p>{formatIST(w.approved_date).split(',')[1]?.trim()}</p>
+                          </>
+                        ) : <p>-</p>}
                       </div>
                     </TableCell>
                     <TableCell>
                       {w.status === 'pending' && (
                         <div className="flex gap-1">
-                          <Button size="sm" className="bg-green-600 h-7" onClick={() => {
+                          <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 h-7 text-xs" onClick={() => {
                             const txnId = prompt(`Enter Transaction ID for ₹${w.amount} approval:`);
-                            if (txnId === null) return; // cancelled
+                            if (txnId === null) return;
                             approveWithdrawalMutation.mutate({ withdrawalId: w.id, withdrawal: w, txnId: txnId.trim() });
                           }}>✓ Approve</Button>
-                          <Button size="sm" variant="destructive" className="h-7" onClick={() => {
+                          <Button size="sm" variant="destructive" className="h-7 text-xs" onClick={() => {
                             const reason = prompt("Reason:");
                             if (reason) rejectWithdrawalMutation.mutate({ id: w.id, reason, withdrawal: w });
                           }}>✗</Button>
