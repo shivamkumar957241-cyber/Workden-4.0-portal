@@ -287,16 +287,20 @@ export default function DeviceTrackingTab({ appUsers, loginAttempts }) {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleForceLogout(user)}
-                          disabled={forceLogoutLoading === user.id}
-                          className="h-8 text-xs"
-                        >
-                          <LogOut className="w-3 h-3 mr-1" />
-                          {forceLogoutLoading === user.id ? "Logging out…" : "Force Logout"}
-                        </Button>
+                        {user.is_logged_in ? (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleForceLogout(user)}
+                            disabled={forceLogoutLoading === user.id}
+                            className="h-8 text-xs"
+                          >
+                            <LogOut className="w-3 h-3 mr-1" />
+                            {forceLogoutLoading === user.id ? "Logging out…" : "Force Logout"}
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-gray-400 font-medium px-2">Logged Out</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   );
@@ -379,15 +383,19 @@ export default function DeviceTrackingTab({ appUsers, loginAttempts }) {
                         {user.last_active ? getTimeSince(user.last_active) : "Never"}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleForceLogout(user)}
-                          disabled={forceLogoutLoading === user.id}
-                          className="h-7 text-xs text-red-600 border-red-300 hover:bg-red-50"
-                        >
-                          <LogOut className="w-3 h-3 mr-1" /> Logout
-                        </Button>
+                        {user.is_logged_in ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleForceLogout(user)}
+                            disabled={forceLogoutLoading === user.id}
+                            className="h-7 text-xs text-red-600 border-red-300 hover:bg-red-50"
+                          >
+                            <LogOut className="w-3 h-3 mr-1" /> {forceLogoutLoading === user.id ? 'Logging out...' : 'Force Logout'}
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-gray-400 font-medium px-2">Logged Out</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   );
