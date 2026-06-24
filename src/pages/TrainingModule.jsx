@@ -79,10 +79,14 @@ export default function TrainingModule() {
   const taskNames = tasks.map(t => t.name);
   
   trainingVideos.forEach(video => {
-    if (!videosByTask[video.task_name]) videosByTask[video.task_name] = [];
-    videosByTask[video.task_name].push(video);
-    if (!taskNames.includes(video.task_name) && !otherTopics.includes(video.task_name)) {
-      otherTopics.push(video.task_name);
+    // Find matching task by case-insensitive name
+    const matchedTask = tasks.find(t => t.name.toLowerCase() === video.task_name?.toLowerCase());
+    const finalTaskName = matchedTask ? matchedTask.name : (video.task_name || 'General');
+    
+    if (!videosByTask[finalTaskName]) videosByTask[finalTaskName] = [];
+    videosByTask[finalTaskName].push(video);
+    if (!taskNames.includes(finalTaskName) && !otherTopics.includes(finalTaskName)) {
+      otherTopics.push(finalTaskName);
     }
   });
   
@@ -114,7 +118,8 @@ export default function TrainingModule() {
     "from-amber-500 to-orange-500",
   ];
 
-  const isAdmin = localStorage.getItem('workden_4_login_id') === 'SHIVAM' || user?.role === 'admin';
+  const savedLoginId = (localStorage.getItem('workden_4_login_id') || '').toLowerCase();
+  const isAdmin = savedLoginId === 'shivam' || user?.role === 'admin';
   if (user && !user.training_access && !isAdmin) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-4 md:p-8 pb-24">
