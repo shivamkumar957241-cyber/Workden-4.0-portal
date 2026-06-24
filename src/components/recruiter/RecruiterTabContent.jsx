@@ -332,6 +332,24 @@ export default function RecruiterTabContent({
       {/* TASKS TAB */}
       {activeTab === 'tasks' && (
         <SectionCard title="Task Submissions" icon={BarChart3} count={filteredProofsDisplay.length} gradient="bg-gradient-to-r from-emerald-700 to-teal-700">
+          
+          {/* STATS BOXES */}
+          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { label: "Total Tasks", value: allProofs?.length || 0, color: "text-blue-700", bg: "bg-blue-50 border-blue-200" },
+                { label: "Approved Tasks", value: (allProofs || []).filter(p => p.status === 'approved').length, color: "text-emerald-700", bg: "bg-emerald-50 border-emerald-200" },
+                { label: "Pending Tasks", value: (allProofs || []).filter(p => p.status === 'pending').length, color: "text-amber-700", bg: "bg-amber-50 border-amber-200" },
+                { label: "Rejected Tasks", value: (allProofs || []).filter(p => p.status === 'rejected').length, color: "text-red-700", bg: "bg-red-50 border-red-200" },
+              ].map((stat, i) => (
+                <div key={i} className={`p-3 border rounded-xl text-center shadow-sm ${stat.bg}`}>
+                  <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
+                  <p className="text-xs font-medium text-gray-600 mt-0.5">{stat.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="px-4 py-3 border-b border-gray-50 space-y-2.5">
             <div className="flex flex-wrap gap-2 items-center">
               <select value={taskStatusFilter} onChange={e => setTaskStatusFilter(e.target.value)} className="px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-white text-gray-700 focus:outline-none focus:border-blue-400">

@@ -4,6 +4,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { TaskLockProvider } from '@/lib/TaskLockContext'
 import VisualEditAgent from '@/lib/VisualEditAgent'
+import SessionWatcher from '@/lib/SessionWatcher'
 import { pagesConfig } from './pages.config'
 import { HashRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
@@ -74,6 +75,7 @@ function App() {
       </Router>
       <Toaster />
       <VisualEditAgent />
+      <SessionWatcher />
       </TaskLockProvider>
     </QueryClientProvider>
   )
