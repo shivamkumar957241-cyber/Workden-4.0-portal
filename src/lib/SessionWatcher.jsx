@@ -28,6 +28,7 @@ export default function SessionWatcher() {
               localStorage.removeItem('workden_4_session_id');
               localStorage.removeItem('workden_4_session_fingerprint');
               if (!window.location.hash.includes('/UserLogin')) {
+                alert("Your account has been logged out by the administration.");
                 window.location.href = '#/UserLogin';
               }
             }

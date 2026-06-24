@@ -302,8 +302,8 @@ export default function RecruiterTabContent({
                         <td className="px-3 py-2.5">
                           <span className={`text-xs font-medium text-white px-2 py-0.5 rounded-full ${tag.color}`}>{tag.label}</span>
                         </td>
-                        <td className="px-3 py-2.5 font-semibold text-emerald-700 text-xs">₹{(Number(u.wallet_balance || 0) || 0).toFixed(0)}</td>
-                        <td className="px-3 py-2.5 font-semibold text-red-500 text-xs">₹{(Number(totalWd) || 0).toFixed(0)}</td>
+                        <td className="px-3 py-2.5 font-semibold text-emerald-700 text-xs">₹{((Number(u.wallet_balance) || 0) + (Number(u.total_withdrawals) || 0)).toFixed(0)}</td>
+                        <td className="px-3 py-2.5 font-semibold text-red-500 text-xs">₹{(Number(u.total_withdrawals) || 0).toFixed(0)}</td>
                         <td className="px-3 py-2.5 text-center text-xs font-medium text-purple-600">{userWithdrawals.length}</td>
                         <td className="px-3 py-2.5 text-xs text-gray-400">{u.last_active ? new Date(u.last_active).toLocaleString() : '—'}</td>
                         <td className="px-3 py-2.5">
@@ -337,14 +337,14 @@ export default function RecruiterTabContent({
           <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { label: "Total Tasks", value: allProofs?.length || 0, color: "text-blue-700", bg: "bg-blue-50 border-blue-200" },
-                { label: "Approved Tasks", value: (allProofs || []).filter(p => p.status === 'approved').length, color: "text-emerald-700", bg: "bg-emerald-50 border-emerald-200" },
-                { label: "Pending Tasks", value: (allProofs || []).filter(p => p.status === 'pending').length, color: "text-amber-700", bg: "bg-amber-50 border-amber-200" },
-                { label: "Rejected Tasks", value: (allProofs || []).filter(p => p.status === 'rejected').length, color: "text-red-700", bg: "bg-red-50 border-red-200" },
+                { label: "Total Tasks", value: allProofs?.length || 0, color: "text-white", bg: "bg-gradient-to-br from-blue-500 to-indigo-600 border-transparent", labelColor: "text-blue-100" },
+                { label: "Approved Tasks", value: (allProofs || []).filter(p => p.status === 'approved').length, color: "text-white", bg: "bg-gradient-to-br from-emerald-500 to-green-600 border-transparent", labelColor: "text-emerald-100" },
+                { label: "Pending Tasks", value: (allProofs || []).filter(p => p.status === 'pending').length, color: "text-white", bg: "bg-gradient-to-br from-amber-500 to-orange-500 border-transparent", labelColor: "text-amber-100" },
+                { label: "Rejected Tasks", value: (allProofs || []).filter(p => p.status === 'rejected').length, color: "text-white", bg: "bg-gradient-to-br from-rose-500 to-red-600 border-transparent", labelColor: "text-rose-100" },
               ].map((stat, i) => (
-                <div key={i} className={`p-3 border rounded-xl text-center shadow-sm ${stat.bg}`}>
+                <div key={i} className={`p-3 border rounded-xl text-center shadow-md ${stat.bg}`}>
                   <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
-                  <p className="text-xs font-medium text-gray-600 mt-0.5">{stat.label}</p>
+                  <p className={`text-xs font-medium mt-0.5 ${stat.labelColor}`}>{stat.label}</p>
                 </div>
               ))}
             </div>
