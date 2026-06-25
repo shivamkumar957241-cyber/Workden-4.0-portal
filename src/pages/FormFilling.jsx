@@ -267,7 +267,7 @@ export default function FormFilling() {
 
       await base44.entities.Proof.create({
         user_id: user?.id,
-        user_name: user?.full_name || user?.email,
+        user_name: user?.full_name || user?.email || user?.login_user_id || 'User',
         user_id_number: user?.login_user_id || user?.id,
         task_id: '',
         task_name: TASK_NAME,

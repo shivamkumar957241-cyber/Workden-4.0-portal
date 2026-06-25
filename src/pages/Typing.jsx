@@ -181,7 +181,7 @@ export default function Typing() {
     try {
       const wordCount = item.userInput.split(/\s+/).filter(w => w.length > 0).length;
       await base44.entities.SavedWork.create({
-        user_id: user?.id, user_name: user?.full_name || user?.email,
+        user_id: user?.id, user_name: user?.full_name || user?.email || user?.login_user_id || 'User',
         user_id_number: user?.login_user_id || user?.id,
         work_type: "Typing",
         task_content: `Page #${item.id} - ${item.title}\nWords: ${wordCount}\n\n${item.userInput}`,

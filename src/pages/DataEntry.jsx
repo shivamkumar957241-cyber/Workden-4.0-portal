@@ -494,7 +494,7 @@ export default function DataEntry() {
 
       await base44.entities.Proof.create({
         user_id: userRef.current?.id,
-        user_name: userRef.current?.full_name || userRef.current?.email,
+        user_name: userRef.current?.full_name || userRef.current?.email || userRef.current?.login_user_id || 'User',
         user_id_number: userRef.current?.login_user_id || userRef.current?.id,
         task_id: '',
         task_name: TASK_NAME,
