@@ -322,7 +322,7 @@ export default function FormFilling() {
     return (
       <TaskTimeGuard>
         <TaskPreviewScreen
-          taskName="Form Filling"
+          taskName={TASK_NAME}
           reward={REWARD}
           total={TOTAL}
           fields={FIELDS}

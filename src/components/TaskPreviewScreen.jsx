@@ -90,7 +90,7 @@ export default function TaskPreviewScreen({ taskName, reward, onStart, onBack })
       </div>
 
       {/* Content wrapper */}
-      <div className="max-w-xl mx-auto px-4 py-4">
+      <div className="max-w-3xl mx-auto px-4 py-4">
         <div className="border-2 border-blue-100 rounded-3xl p-4 space-y-4 bg-white shadow-sm">
 
           {/* Task Preview Header Card */}

@@ -568,7 +568,7 @@ export default function DataEntry() {
     return (
       <TaskTimeGuard>
         <TaskPreviewScreen
-          taskName="Data Entry"
+          taskName={TASK_NAME}
           reward={REWARD}
           total={TOTAL}
           fields={FIELDS}
