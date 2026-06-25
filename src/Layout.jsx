@@ -33,11 +33,9 @@ import {
 } from "@/components/ui/select";
 
 // ─── HEARTBEAT CONFIG ────────────────────────────────────────────────────────
-// Tab visible hai  → har 15 sec mein last_active + last_heartbeat update
-// Tab hidden hai   → heartbeat band, last_active/last_heartbeat stale
-// Tab wapas aao    → turant ping + interval restart
-// Admin panel threshold = 45 sec (RecruiterDashboard.jsx isReallyOnline mein set hai)
-const HEARTBEAT_INTERVAL_MS = 15 * 1000; // 15 seconds
+// 90 seconds interval — admin "online" threshold should be >= 120s in RecruiterDashboard.
+// 15s was burning ~2400 Firebase writes/user/day. 90s = ~400 writes/user/day (6x reduction).
+const HEARTBEAT_INTERVAL_MS = 90 * 1000; // 90 seconds
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function Layout({ children, currentPageName }) {
@@ -60,52 +58,55 @@ export default function Layout({ children, currentPageName }) {
   const [holidays, setHolidays]                       = useState([]);
   const [platformOff, setPlatformOff]                 = useState(false);
 
-  // ── Global Subscription Listener (Instant Unlock & Lock) ──────────────────
+  // ── AppUser Real-Time Listener — 1 read per user, instant admin changes ──────
+  // onSnapshot fires once on setup (reads 1 doc) then only when doc changes.
+  // This replaces the old background-verify Firebase call in loadUser().
   useEffect(() => {
     let unsubscribe = null;
     const userSource = localStorage.getItem('workden_4_user_source');
     if (user?.id && userSource === 'appuser') {
       unsubscribe = base44.entities.AppUser.subscribeDoc(user.id, (event) => {
-         if (event.data) {
-            setUser(prev => {
-               if (prev) {
-                   const wasUnlocked = prev.is_subscribed || prev.free_unlock;
-                   const isUnlocked = event.data.is_subscribed || event.data.free_unlock;
-                   
-                   // If status changed in either direction (Unlock -> Lock OR Lock -> Unlock)
-                   if (wasUnlocked !== isUnlocked) {
-                       localStorage.setItem('workden_4_user', JSON.stringify(event.data));
-                       window.location.reload();
-                   }
-               }
-               return event.data;
-            });
-            localStorage.setItem('workden_4_user', JSON.stringify(event.data));
-         }
+        if (!event.data) return;
+        const newData = { ...event.data, id: event.id };
+        setUser(prev => {
+          if (prev) {
+            const wasUnlocked = !!(prev.is_subscribed || prev.free_unlock);
+            const isUnlocked  = !!(newData.is_subscribed || newData.free_unlock);
+            if (wasUnlocked !== isUnlocked) {
+              localStorage.setItem('workden_4_user', JSON.stringify(newData));
+              window.location.reload();
+            }
+          }
+          return newData;
+        });
+        localStorage.setItem('workden_4_user', JSON.stringify(newData));
       });
     }
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
+    return () => { if (unsubscribe) unsubscribe(); };
   }, [user?.id]);
 
-  // ── Global Cache Buster (Instant Admin Updates) ─────────────────────────
+  // ── Tasks: onSnapshot handles BOTH initial load AND real-time updates ─────────
+  // onSnapshot reads all docs ONCE on setup, then only sends diffs (changed docs).
+  // Do NOT call loadTasks() separately — that causes double reads.
   useEffect(() => {
-    let unsubscribe = null;
-    try {
-      unsubscribe = base44.entities.Settings.subscribeDoc('cache_buster', (event) => {
-         if (event.data && event.data.timestamp) {
-             const lastBust = localStorage.getItem('workden_last_cache_bust');
-             if (lastBust && Number(lastBust) < event.data.timestamp) {
-                 queryClientInstance.invalidateQueries(); // Force fetch new data instantly
-             }
-             localStorage.setItem('workden_last_cache_bust', event.data.timestamp);
-         }
-      });
-    } catch(e) {}
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
+    const cachedTasks = localStorage.getItem('workden_tasks');
+    if (cachedTasks) { try { setTasks(JSON.parse(cachedTasks)); } catch (e) {} }
+    const unsub = base44.entities.Task.subscribeAll((tasksData) => {
+      setTasks(tasksData);
+      try { localStorage.setItem('workden_tasks', JSON.stringify(tasksData)); } catch(e) {}
+    });
+    return () => { if (unsub) unsub(); };
+  }, []);
+
+  // ── GlobalSettings: onSnapshot handles BOTH initial load AND real-time updates ─
+  // Same pattern: no loadGlobalSettings() needed.
+  useEffect(() => {
+    const unsub = base44.entities.GlobalSettings.subscribeAll((settingsData) => {
+      setGlobalSettings(settingsData);
+      const offSetting = settingsData.find(s => s.setting_key === 'platform_off_enabled');
+      setPlatformOff(offSetting?.setting_value === 'true');
+    });
+    return () => { if (unsub) unsub(); };
   }, []);
 
   // ── Heartbeat refs (no re-render needed) ────────────────────────────────
@@ -113,27 +114,19 @@ export default function Layout({ children, currentPageName }) {
   const lastPingSentRef      = useRef(0);
   const heartbeatUserIdRef   = useRef(null); // tracks which user's heartbeat is running
 
-  // ── Heartbeat: send one ping ─────────────────────────────────────────────
+  // ── Heartbeat: send one ping (90s interval, saves quota) ────────────────────
   const sendHeartbeatPing = useCallback(async (userId) => {
     if (!userId) return;
-
-    // Debounce: 10 sec ke andar baar baar ping mat karo
+    // Debounce: don't ping if last ping was less than 60s ago
     const now = Date.now();
-    if (now - lastPingSentRef.current < 10_000) return;
+    if (now - lastPingSentRef.current < 60_000) return;
     lastPingSentRef.current = now;
-
     try {
       await base44.entities.AppUser.update(userId, {
-        last_active: new Date().toISOString(),
-        // ✅ FIX: last_heartbeat bhi update karo
-        // RecruiterDashboard ka isReallyOnline() last_heartbeat ko 45s threshold se check karta hai.
-        // Pehle sirf last_active update hota tha → fallback 5-min threshold laga → user 5 min tak
-        // "online" dikhta tha tab switch karne ke baad bhi.
-        // Ab last_heartbeat bhi set hoga → 45s mein correctly offline ho jaayega.
+        last_active:    new Date().toISOString(),
         last_heartbeat: new Date().toISOString(),
       });
     } catch (err) {
-      // Network error — silently ignore, don't crash
       console.warn("[Heartbeat] ping failed:", err?.message);
     }
   }, []);
@@ -203,59 +196,20 @@ export default function Layout({ children, currentPageName }) {
   // ────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    const cachedUser  = localStorage.getItem('workden_4_user');
-    const cachedTasks = localStorage.getItem('workden_tasks');
+    // Load user from localStorage immediately (no Firebase read = instant)
+    const cachedUser = localStorage.getItem('workden_4_user');
+    if (cachedUser) { try { setUser(JSON.parse(cachedUser)); } catch (e) {} }
 
-    if (cachedUser)  { try { setUser(JSON.parse(cachedUser));   } catch (e) {} }
-    if (cachedTasks) { try { setTasks(JSON.parse(cachedTasks)); } catch (e) {} }
-
+    // loadUser() handles redirect-to-login if no session.
+    // Tasks and GlobalSettings are loaded by onSnapshot listeners above — no extra calls needed.
+    // Holidays are static data — load once.
     loadUser();
-    loadTasks();
-    loadGlobalSettings();
     loadHolidays();
 
-    // SESSION POLL — checks every 30s if this session is still valid
-    const sessionPollInterval = setInterval(async () => {
-      const userSource      = localStorage.getItem('workden_4_user_source');
-      const storedSessionId = localStorage.getItem('workden_4_session_id');
-      const savedUserId     = localStorage.getItem('workden_4_login_id');
-
-      if (userSource !== 'appuser' || !storedSessionId || !savedUserId) return;
-
-      try {
-        const dbUsers = await base44.entities.AppUser.filter({ login_user_id: savedUserId });
-        if (!dbUsers || dbUsers.length === 0) return;
-
-        const dbUser = dbUsers[0];
-
-        if (dbUser.status === 'inactive') {
-          alert("⚠️ Your account has been deactivated. Please contact admin.");
-          localStorage.clear(); sessionStorage.clear();
-          window.location.replace("#" + createPageUrl("UserLogin"));
-          return;
-        }
-
-        const sessionChanged = dbUser.session_id && dbUser.session_id !== storedSessionId;
-        if (sessionChanged) {
-          const lastActive    = dbUser.last_active ? new Date(dbUser.last_active) : null;
-          const fiveMinsAgo   = new Date(Date.now() - 5 * 60 * 1000);
-          const otherDeviceIsActive = lastActive && lastActive > fiveMinsAgo;
-          if (otherDeviceIsActive) {
-            alert("⚠️ You have been logged out because another device logged in with your account.");
-            localStorage.clear(); sessionStorage.clear();
-            window.location.replace("#" + createPageUrl("UserLogin"));
-            return;
-          }
-        }
-
-        if (dbUser.role !== 'admin' && (!dbUser.is_subscribed && !dbUser.free_unlock)) {
-          localStorage.setItem('workden_4_user', JSON.stringify(dbUser));
-          setUser(dbUser);
-        }
-      } catch (e) {
-        // Network error — skip this tick
-      }
-    }, 30000);
+    // Session enforcement: SessionWatcher.jsx (onSnapshot) handles forced logout in real-time.
+    // AppUser subscribeDoc above handles user data updates in real-time.
+    // No polling needed.
+    const sessionPollInterval = null;
 
     // Task page security (copy/paste/right-click disable)
     const TASK_PAGE_NAMES = ['DataEntry','FormFilling','GrammarCorrection','EbookTyping','CaptchaFilling','TaskWorkspace','ChatSupport','PdfToWordTyping','Typing'];
@@ -490,119 +444,29 @@ export default function Layout({ children, currentPageName }) {
     const savedUserSource = localStorage.getItem('workden_4_user_source');
     const savedUserStr    = localStorage.getItem('workden_4_user');
 
-    if (savedUserId === 'SHIVAM' && savedPassword === '995567') {
-      if (savedUserStr) { try { setUser(JSON.parse(savedUserStr)); return; } catch (e) {} }
+    // ── STEP 1: If we have valid credentials in localStorage, set user IMMEDIATELY ──
+    // This prevents any flicker or redirect loop. Never redirect if we have valid data.
+    if (savedUserId && savedPassword && savedUserStr) {
       try {
-        const currentUser = await base44.auth.me();
-        if (currentUser?.role === 'admin') { setUser(currentUser); return; }
-      } catch (e) {}
-      setUser({ role: 'admin', full_name: 'Admin', login_user_id: 'SHIVAM', login_password: '995567', is_subscribed: true });
-      return;
-    }
-
-    if (savedUserId && savedPassword && savedUserSource === 'appuser') {
-      if (savedUserStr) {
-        try {
-          const localUser = JSON.parse(savedUserStr);
-          if (localUser.login_user_id === savedUserId) {
-            try {
-              const dbUsers = await base44.entities.AppUser.filter({ login_user_id: savedUserId });
-              if (dbUsers?.length > 0 && dbUsers[0].login_password === savedPassword) {
-                const dbUser = dbUsers[0];
-
-                if (dbUser.status === 'inactive') {
-                  alert("Your account has been deactivated. Please contact admin.");
-                  localStorage.clear();
-                  window.location.replace("#" + createPageUrl("UserLogin"));
-                  return;
-                }
-
-                const storedSessionId = localStorage.getItem('workden_4_session_id');
-                if (
-                  dbUser.role !== 'admin' &&
-                  dbUser.session_id && storedSessionId &&
-                  dbUser.session_id !== storedSessionId
-                ) {
-                  const lastActive = dbUser.last_active ? new Date(dbUser.last_active) : null;
-                  const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000);
-                  if (lastActive && lastActive > fiveMinsAgo) {
-                    alert("⚠️ Your session has expired because another device is actively logged in. Please logout from that device first.");
-                    localStorage.clear(); sessionStorage.clear();
-                    window.location.replace("#" + createPageUrl("UserLogin"));
-                    return;
-                  }
-                }
-
-                // Note: last_active / last_heartbeat ab heartbeat handle karega — yahan update mat karo
-                // Warna heartbeat ka debounce trigger ho jaata hai on mount
-                setUser(dbUser);
-                localStorage.setItem('workden_4_user', JSON.stringify(dbUser));
-                return;
-              }
-            } catch (e) {
-              setUser(localUser); return;
-            }
-          }
-        } catch (e) {}
-      }
-      if (currentPageName !== 'UserLogin') window.location.replace("#" + createPageUrl("UserLogin"));
-      return;
-    }
-
-    try {
-      const currentUser = await base44.auth.me();
-      if (currentUser.status === 'inactive') {
-        alert("Your account has been deactivated. Please contact support.");
-        localStorage.clear();
-        window.location.replace("#" + createPageUrl("UserLogin"));
-        return;
-      }
-      if (currentUser.role === 'admin') {
-        setUser(currentUser);
-        localStorage.setItem('workden_4_user', JSON.stringify(currentUser));
-        return;
-      }
-      if (savedUserId && savedPassword) {
-        const localUser = savedUserStr ? JSON.parse(savedUserStr) : null;
-        if (localUser?.login_user_id === savedUserId && localUser?.login_password === savedPassword) {
-          setUser(localUser); return;
+        const localUser = JSON.parse(savedUserStr);
+        if (localUser && (localUser.login_user_id === savedUserId || savedUserId === 'SHIVAM')) {
+          setUser(localUser); // Set user immediately from cache - no flicker
+          
+          // User set from localStorage immediately.
+          // Fresh data will arrive via AppUser subscribeDoc (onSnapshot) — no extra Firebase read needed here.
+          return; // ← Done, no quota-burning background verify needed.
         }
-      }
-      if (!currentUser.login_user_id || !currentUser.login_password) {
-        if (currentPageName !== 'UserLogin') window.location.replace("#" + createPageUrl("UserLogin"));
-        return;
-      }
-      setUser(currentUser);
-      localStorage.setItem('workden_4_user', JSON.stringify(currentUser));
-    } catch (error) {
-      if (savedUserId && savedPassword && savedUserStr) {
-        try {
-          const localUser = JSON.parse(savedUserStr);
-          if (localUser?.login_user_id === savedUserId && localUser?.login_password === savedPassword) {
-            setUser(localUser); return;
-          }
-        } catch (e) {}
-      }
-      if (currentPageName !== 'UserLogin') window.location.replace("#" + createPageUrl("UserLogin"));
+      } catch (e) {}
     }
+
+    // ── STEP 2: No valid localStorage — check if we're on a public page ──
+    // If there's NO session at all, just let the bottom guard handle the redirect
+    // (line 828: if (!hasSession) redirect to login)
+    // We do NOT forcefully redirect here to avoid loops.
   };
 
-  const loadTasks = async () => {
-    try {
-      const taskList = await base44.entities.Task.list();
-      setTasks(taskList);
-      localStorage.setItem('workden_tasks', JSON.stringify(taskList));
-    } catch (error) { console.error("Error loading tasks:", error); }
-  };
-
-  const loadGlobalSettings = async () => {
-    try {
-      const settings = await base44.entities.GlobalSettings.list();
-      setGlobalSettings(settings);
-      const isOff = settings.find(s => s.setting_key === 'platform_off_enabled')?.setting_value === 'true';
-      setPlatformOff(isOff);
-    } catch (e) {}
-  };
+  // loadTasks and loadGlobalSettings removed — onSnapshot listeners handle initial + real-time data.
+  // This eliminates double-reads that were burning quota.
 
   const loadHolidays = async () => {
     try {

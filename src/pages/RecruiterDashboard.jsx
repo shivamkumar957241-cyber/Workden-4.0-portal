@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
+import { useFirebaseData } from "@/hooks/useFirebaseData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +23,9 @@ const isReallyOnline = (user) => {
   const checkTime = user.last_heartbeat || user.last_active;
   if (!checkTime) return false;
   const diffMs = Date.now() - new Date(checkTime).getTime();
-  const threshold = user.last_heartbeat ? 45 * 1000 : 5 * 60 * 1000;
+  // Threshold = heartbeat_interval (90s) + buffer (60s) = 150s
+  // If heartbeat is missing, fall back to 5-minute last_active window
+  const threshold = user.last_heartbeat ? 150 * 1000 : 5 * 60 * 1000;
   return diffMs < threshold;
 };
 
@@ -177,8 +180,26 @@ function RecruiterLogin({ loginForm, setLoginForm, loginError, loginLoading, sho
 
 export default function RecruiterDashboard() {
   const [recruiter, setRecruiter] = useState(null);
-  const [assignedUsers, setAssignedUsers] = useState([]);
-  const [proofs, setProofs] = useState([]);
+  const { data: allAppUsers } = useFirebaseData('AppUser', '-created_date', 1500);
+  const { data: allProofs } = useFirebaseData('Proof', '-created_date', 2000);
+  const { data: allWithdrawals } = useFirebaseData('WithdrawalRequest', '-created_date', 1000);
+  const { data: allSubPayments } = useFirebaseData('SubscriptionPayment', '-created_date', 1000);
+  const { data: allReferralPartners } = useFirebaseData('ReferralPartner', '-created_date', 500);
+  const { data: liveActivities } = useFirebaseData('LiveActivity', '-start_time', 500);
+  const { data: activityHistory } = useFirebaseData('ActivityHistory', '-end_time', 1000);
+
+  const assignedUsers = React.useMemo(() => {
+    if (!recruiter) return [];
+    return allAppUsers.filter(u => String(u.assigned_recruiter_id) === String(recruiter.id));
+  }, [allAppUsers, recruiter]);
+
+  const assignedUserIds = React.useMemo(() => new Set(assignedUsers.map(u => String(u.id))), [assignedUsers]);
+
+  const proofs = React.useMemo(() => allProofs.filter(p => assignedUserIds.has(String(p.user_id))), [allProofs, assignedUserIds]);
+  const withdrawals = React.useMemo(() => allWithdrawals.filter(w => assignedUserIds.has(String(w.user_id))), [allWithdrawals, assignedUserIds]);
+  const subscriptionPayments = React.useMemo(() => allSubPayments.filter(s => assignedUserIds.has(String(s.user_id))), [allSubPayments, assignedUserIds]);
+  const referralPartners = React.useMemo(() => allReferralPartners.filter(r => assignedUserIds.has(String(r.user_id))), [allReferralPartners, assignedUserIds]);
+
   const [loading, setLoading] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
   const [createDialog, setCreateDialog] = useState(false);
@@ -192,8 +213,6 @@ export default function RecruiterDashboard() {
   const [dateFilter, setDateFilter] = useState("all");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
-  const [withdrawals, setWithdrawals] = useState([]);
-  const [subscriptionPayments, setSubscriptionPayments] = useState([]);
   const [userSearch, setUserSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [deleteConfirmUser, setDeleteConfirmUser] = useState(null);
@@ -204,7 +223,6 @@ export default function RecruiterDashboard() {
   const [perfSummaryDialog, setPerfSummaryDialog] = useState(false);
   const [viewingPerf, setViewingPerf] = useState(null);
   const [activeTab, setActiveTab] = useState("users");
-  const [referralPartners, setReferralPartners] = useState([]);
   const [forceLogoutLoading, setForceLogoutLoading] = useState(null);
   const [deviceSearch, setDeviceSearch] = useState("");
   const [reportUser, setReportUser] = useState(null);
@@ -216,8 +234,6 @@ export default function RecruiterDashboard() {
   const [assignRecruiterDialog, setAssignRecruiterDialog] = useState(false);
   const [assignRecruiterUser, setAssignRecruiterUser] = useState(null);
   const [assignRecruiterName, setAssignRecruiterName] = useState("");
-  const [liveActivities, setLiveActivities] = useState([]);
-  const [activityHistory, setActivityHistory] = useState([]);
   const [activitySearch, setActivitySearch] = useState("");
   const [lastActivityRefresh, setLastActivityRefresh] = useState(new Date());
   const [nowTick, setNowTick] = useState(Date.now());
@@ -237,20 +253,6 @@ export default function RecruiterDashboard() {
 
   const recruiterRef = useRef(null);
   useEffect(() => { recruiterRef.current = recruiter; }, [recruiter]);
-  useEffect(() => {
-    if (!isLoggedIn) return;
-    const pollOnlineStatus = async () => {
-      const rec = recruiterRef.current;
-      if (!rec) return;
-      try {
-        const freshUsers = await base44.entities.AppUser.list('-created_date', 1000);
-        const myUsers = freshUsers.filter(u => String(u.assigned_recruiter_id) === String(rec.id));
-        setAssignedUsers(myUsers);
-      } catch (e) {}
-    };
-    const pollInterval = setInterval(pollOnlineStatus, 20000);
-    return () => clearInterval(pollInterval);
-  }, [isLoggedIn]);
 
   useEffect(() => {
     const t = setInterval(() => setNowTick(Date.now()), 1000);
@@ -281,7 +283,6 @@ export default function RecruiterDashboard() {
       localStorage.setItem('workden_4_user_source', 'recruiter');
       setRecruiter(found);
       setIsLoggedIn(true);
-      await loadData(found);
     } catch (err) {
       setLoginError("❌ Login failed. Please try again.");
     } finally {
@@ -300,35 +301,10 @@ export default function RecruiterDashboard() {
     try {
       const allRecruiters = await base44.entities.Recruiter.list();
       const found = allRecruiters.find(r => r.id === recruiterId && r.status === 'active');
-      if (found) { setRecruiter(found); setIsLoggedIn(true); await loadData(found); }
+      if (found) { setRecruiter(found); setIsLoggedIn(true); }
     } catch (e) {}
     finally { setLoading(false); }
   };
-
-  const loadData = async (rec) => {
-    try {
-      const [allAppUsers, allProofs, allWithdrawals, allSubPayments, allReferralPartners] = await Promise.all([
-        base44.entities.AppUser.list('-created_date', 1000),
-        base44.entities.Proof.list('-created_date', 2000),
-        base44.entities.WithdrawalRequest.list('-created_date', 1000),
-        base44.entities.SubscriptionPayment.list('-created_date', 1000),
-        base44.entities.ReferralPartner.list('-created_date', 500)
-      ]);
-      const myUsers = allAppUsers.filter(u => String(u.assigned_recruiter_id) === String(rec.id));
-      setAssignedUsers(myUsers);
-      const myUserIds = new Set(myUsers.map(u => String(u.id)));
-      setProofs(allProofs.filter(p => myUserIds.has(String(p.user_id))));
-      setWithdrawals(allWithdrawals.filter(w => myUserIds.has(String(w.user_id))));
-      setSubscriptionPayments(allSubPayments.filter(s => myUserIds.has(String(s.user_id))));
-      setReferralPartners(allReferralPartners.filter(r => myUserIds.has(String(r.user_id))));
-    } catch (e) { console.error('loadData error:', e); }
-  };
-
-  useEffect(() => {
-    if (!isLoggedIn || !recruiter) return;
-    const interval = setInterval(() => loadData(recruiter), 30000);
-    return () => clearInterval(interval);
-  }, [isLoggedIn, recruiter]);
 
   const getFilteredUsers = () => {
     const now = new Date();
@@ -378,7 +354,6 @@ export default function RecruiterDashboard() {
   const handleDeleteUser = async (u) => {
     try {
       await base44.entities.AppUser.delete(u.id);
-      await loadData(recruiter);
       setDeleteConfirmUser(null);
       alert("✅ User deleted!");
     } catch (e) { alert("❌ Failed to delete user."); }
@@ -406,7 +381,6 @@ export default function RecruiterDashboard() {
       });
       setCreatedCreds({ userId: newUser.login_user_id, password: newUser.login_password, name: newUser.full_name });
       setForm({ name: "", phone: "", email: "", city: "", qualification: "", recruiter_name: "" });
-      await loadData(recruiter);
     } catch (err) { alert("❌ Failed to create user. Try again."); }
     finally { setCreating(false); }
   };
@@ -416,7 +390,6 @@ export default function RecruiterDashboard() {
     setForceLogoutLoading(user.id);
     try {
       await base44.entities.AppUser.update(user.id, { is_logged_in: false, session_id: null });
-      await loadData(recruiter);
       alert(`✅ ${user.full_name} logged out. All data is safe.`);
     } catch (e) { alert("❌ Failed to logout."); }
     finally { setForceLogoutLoading(null); }
@@ -437,7 +410,6 @@ export default function RecruiterDashboard() {
     if (!assignRecruiterUser || !assignRecruiterName.trim()) return;
     try {
       await base44.entities.AppUser.update(assignRecruiterUser.id, { assigned_recruiter_name: assignRecruiterName.trim() });
-      await loadData(recruiter);
       setAssignRecruiterDialog(false);
       setAssignRecruiterUser(null);
       setAssignRecruiterName("");
@@ -445,26 +417,8 @@ export default function RecruiterDashboard() {
     } catch (e) { alert("❌ Failed to update."); }
   };
 
-  useEffect(() => {
-    if (activeTab !== 'activity' || !recruiter) return;
-    const fetchActivity = async () => {
-      try {
-        const currentUsers = assignedUsersRef.current;
-        const myUserIds = new Set(currentUsers.map(u => String(u.id)));
-        if (myUserIds.size === 0) return;
-        const [live, hist] = await Promise.all([
-          base44.entities.LiveActivity.list('-start_time', 200),
-          base44.entities.ActivityHistory.list('-end_time', 500),
-        ]);
-        setLiveActivities((live || []).filter(a => myUserIds.has(String(a.user_id))));
-        setActivityHistory((hist || []).filter(a => myUserIds.has(String(a.user_id))));
-        setLastActivityRefresh(new Date());
-      } catch(e) {}
-    };
-    fetchActivity();
-    const interval = setInterval(fetchActivity, 3000);
-    return () => clearInterval(interval);
-  }, [activeTab, recruiter]);
+  const myLiveActivities = React.useMemo(() => (liveActivities || []).filter(a => assignedUserIds.has(String(a.user_id))), [liveActivities, assignedUserIds]);
+  const myActivityHistory = React.useMemo(() => (activityHistory || []).filter(a => assignedUserIds.has(String(a.user_id))), [activityHistory, assignedUserIds]);
 
   const fmtDur = (sec) => {
     if (!sec || sec <= 0) return 'N/A';
@@ -729,7 +683,7 @@ export default function RecruiterDashboard() {
     {tab:"profile",icon:Shield,label:"My Profile"},
   ];
   const pageLabels = {dashboard:"Dashboard",users:"My Users",tasks:"Task Submissions",activity:"Live Activity",devices:"Device Tracking",performance:"Performance",analytics:"Analytics",referralpartners:"Referral Partners",profile:"My Profile"};
-  const activeNow = liveActivities.filter(a => { const ls = a.behavior_data?.last_activity || a.start_time; return ls && (Date.now()-new Date(ls).getTime())/60000<30; }).length;
+  const activeNow = myLiveActivities.filter(a => { const ls = a.behavior_data?.last_activity || a.start_time; return ls && (Date.now()-new Date(ls).getTime())/60000<30; }).length;
 
   return (
     <div className="bg-gray-50 flex" style={{ fontFamily:'Inter,system-ui,sans-serif', height:'100vh', overflow:'hidden' }}>
@@ -837,7 +791,7 @@ export default function RecruiterDashboard() {
               } catch(e) {} setDeleteConfirm(null);
             }}
             deviceSearch={deviceSearch} setDeviceSearch={setDeviceSearch} deviceOfflineFilter={deviceOfflineFilter} setDeviceOfflineFilter={setDeviceOfflineFilter}
-            filterByOfflineDuration={filterByOfflineDuration} getTimeSince={getTimeSince} forceLogoutLoading={forceLogoutLoading} handleForceLogout={handleForceLogout} loadData={loadData}
+            filterByOfflineDuration={filterByOfflineDuration} getTimeSince={getTimeSince} forceLogoutLoading={forceLogoutLoading} handleForceLogout={handleForceLogout}
             approvedAll={approvedAll} rejectedAll={rejectedAll} overallApprovalRate={overallApprovalRate} sortedTasks={sortedTasks} topTask={topTask}
             perfSearchQuery={perfSearchQuery} setPerfSearchQuery={setPerfSearchQuery} perfMonthFilter={perfMonthFilter} setPerfMonthFilter={setPerfMonthFilter}
             setReportUser={setReportUser} setReportDialog={setReportDialog} analyticsTab={analyticsTab} setAnalyticsTab={setAnalyticsTab}

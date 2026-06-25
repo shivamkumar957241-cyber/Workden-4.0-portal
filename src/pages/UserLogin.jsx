@@ -34,33 +34,53 @@ function getDeviceName() {
 
 // ─── GLOBAL LOGOUT UTILITY ────────────────────────────────────────────────────
 export async function performLogout() {
+  // STEP 1: Set flag FIRST — SessionWatcher checks this to avoid false "admin logged you out" alert
   localStorage.setItem('workden_4_manual_logout', '1');
-  try {
-    const userSource  = localStorage.getItem('workden_4_user_source');
-    const userId      = localStorage.getItem('workden_4_user_db_id');
-    const recruiterID = localStorage.getItem('workden_4_recruiter_id');
-    const clearPayload = { is_logged_in: false, session_id: null };
-    if (userId) {
-      if (userSource === 'appuser') await base44.entities.AppUser.update(userId, clearPayload).catch(() => {});
-      else if (userSource === 'user') await base44.entities.User.update(userId, clearPayload).catch(() => {});
-    }
-    if (recruiterID) await base44.entities.Recruiter.update(recruiterID, clearPayload).catch(() => {});
-  } catch (e) {}
+
+  // STEP 2: Read IDs before we clear localStorage
+  const userSource  = localStorage.getItem('workden_4_user_source');
+  const userId      = localStorage.getItem('workden_4_user_db_id');
+  const recruiterID = localStorage.getItem('workden_4_recruiter_id');
+
+  // STEP 3: Clear localStorage IMMEDIATELY — this guarantees logout on this device
+  // even if Firebase is down or quota is exceeded.
   const keys = [
-    'workden_4_login_id','workden_4_login_password','workden_4_user',
-    'workden_4_user_db_id','workden_4_user_source','workden_4_session_fingerprint',
-    'workden_4_session_id','workden_4_recruiter_id','workden_4_manual_logout'
+    'workden_4_login_id', 'workden_4_login_password', 'workden_4_user',
+    'workden_4_user_db_id', 'workden_4_user_source', 'workden_4_session_fingerprint',
+    'workden_4_session_id', 'workden_4_recruiter_id'
   ];
   keys.forEach(k => localStorage.removeItem(k));
+  setTimeout(() => localStorage.removeItem('workden_4_manual_logout'), 2000);
+
+  // STEP 4: Try Firebase update (best-effort, 5s timeout)
+  // If Firebase is quota-exceeded or offline, this silently fails.
+  // That's OK — localStorage is already cleared, user is logged out on this device.
+  // The session_id mismatch will naturally expire on other checks.
+  try {
+    const clearPayload = { is_logged_in: false, session_id: null };
+    const tasks = [];
+    if (userId) {
+      if (userSource === 'appuser') tasks.push(base44.entities.AppUser.update(userId, clearPayload).catch(() => {}));
+      else if (userSource === 'user') tasks.push(base44.entities.User.update(userId, clearPayload).catch(() => {}));
+    }
+    if (recruiterID) tasks.push(base44.entities.Recruiter.update(recruiterID, clearPayload).catch(() => {}));
+    await Promise.race([
+      Promise.all(tasks),
+      new Promise(resolve => setTimeout(resolve, 5000))
+    ]);
+  } catch (e) {
+    // Firebase quota/network error — already logged out locally, that's enough
+  }
 }
 
 // ─── SINGLE DEVICE CHECK ──────────────────────────────────────────────────────
+// Returns true if this account is ACTIVELY logged in on a DIFFERENT device.
 function isBlockedByOtherDevice(dbUser, currentFingerprint) {
   if (!dbUser) return false;
   if (dbUser.role === 'admin') return false;
-  if (!dbUser.is_logged_in) return false;
-  if (!dbUser.session_id || dbUser.session_id.trim() === "") return false;
-  return dbUser.session_id !== currentFingerprint;
+  if (!dbUser.is_logged_in) return false;                              // already logged out
+  if (!dbUser.session_id || dbUser.session_id.trim() === '') return false; // no active session
+  return dbUser.session_id !== currentFingerprint;                    // different device
 }
 
 // ─── STYLES ──────────────────────────────────────────────────────────────────
@@ -475,18 +495,23 @@ export default function UserLogin() {
 
   // Auto-redirect if already logged in
   useEffect(() => {
-    const savedLoginId = localStorage.getItem('workden_4_login_id');
-    const savedUser    = localStorage.getItem('workden_4_user');
-    const userSource   = localStorage.getItem('workden_4_user_source');
-    if (!savedLoginId || !savedUser) return;
+    const savedLoginId  = localStorage.getItem('workden_4_login_id');
+    const savedPassword = localStorage.getItem('workden_4_login_password');
+    const savedUser     = localStorage.getItem('workden_4_user');
+    const userSource    = localStorage.getItem('workden_4_user_source');
+    if (!savedLoginId || !savedPassword || !savedUser) return;
     try {
       const localUser = JSON.parse(savedUser);
       if (!localUser) return;
+      // Validate that the stored user matches stored credentials
+      const idMatch = localUser.login_user_id === savedLoginId || savedLoginId === 'SHIVAM';
+      const passMatch = localUser.login_password === savedPassword || savedLoginId === 'SHIVAM';
+      if (!idMatch || !passMatch) return; // Don't redirect with mismatched data
       if (userSource === 'recruiter') {
         window.location.replace("#" + createPageUrl("RecruiterDashboard"));
         return;
       }
-      if (localUser.login_user_id === savedLoginId || savedLoginId === 'SHIVAM') {
+      if (idMatch) {
         window.location.replace("#" + createPageUrl("Dashboard"));
       }
     } catch (e) {}
@@ -555,15 +580,28 @@ export default function UserLogin() {
       return;
     }
 
+    // ─── QUOTA-SAFE LOGIN: Try Firebase first, fall back to localStorage cache ───
+    // When Firebase quota is exceeded, getDocs() throws. We catch this and check
+    // if the user's credentials match what's stored in localStorage from a previous
+    // successful login. This ensures login works even when quota is exhausted.
+    const cachedUserStr = localStorage.getItem('workden_4_user');
+    const cachedLoginId = localStorage.getItem('workden_4_login_id');
+    const cachedPass    = localStorage.getItem('workden_4_login_password');
+    const cachedSource  = localStorage.getItem('workden_4_user_source');
+
+    let firebaseQuotaError = false;
+
     try {
-      // ── 1. CHECK AppUser ────────────────────────────────────────────────
-      const allAppUsers = await base44.entities.AppUser.list();
-      const appUser = allAppUsers.find(u => {
-        const idOk   = u.login_user_id?.toLowerCase() === inputId.toLowerCase() ||
-                       u.email?.toLowerCase()         === inputId.toLowerCase();
-        const passOk = u.login_password === inputPass || u.phone === inputPass;
-        return idOk && passOk;
-      });
+      // ── 1. CHECK AppUser — filter() by login_user_id for speed ────────────
+      let appUser = null;
+      const appUsers = await base44.entities.AppUser.filter({ login_user_id: inputId });
+      appUser = appUsers.find(u => u.login_password === inputPass || u.phone === inputPass);
+
+      // Try email-based lookup if not found by ID
+      if (!appUser) {
+        const byEmail = await base44.entities.AppUser.filter({ email: inputId.toLowerCase() });
+        appUser = byEmail.find(u => u.login_password === inputPass || u.phone === inputPass);
+      }
 
       if (appUser) {
         if (appUser.status === 'inactive') {
@@ -574,7 +612,9 @@ export default function UserLogin() {
           setError("🔒 Account is already logged in on another device. Please logout from that device first.");
           setLoading(false); return;
         }
-        await base44.entities.AppUser.update(appUser.id, sessionPayload).catch(() => {});
+        // AWAIT Firebase session update — single-device enforcement requires this
+        await base44.entities.AppUser.update(appUser.id, { ...sessionPayload, is_logged_in: true }).catch(() => {});
+
         localStorage.setItem('workden_4_session_fingerprint', fp);
         localStorage.setItem('workden_4_session_id', fp);
         localStorage.setItem('workden_4_login_id',       appUser.login_user_id);
@@ -582,7 +622,7 @@ export default function UserLogin() {
         localStorage.setItem('workden_4_user',           JSON.stringify({ ...appUser, id: appUser.id }));
         localStorage.setItem('workden_4_user_db_id',     appUser.id);
         localStorage.setItem('workden_4_user_source',    'appuser');
-        await base44.entities.LoginAttempt.create({
+        base44.entities.LoginAttempt.create({
           user_id: appUser.id, login_user_id: appUser.login_user_id,
           login_password: appUser.login_password, user_name: appUser.full_name || "",
           user_email: appUser.email || "", user_phone: appUser.phone || "",
@@ -593,14 +633,15 @@ export default function UserLogin() {
         return;
       }
 
-      // ── 2. CHECK User entity ────────────────────────────────────────────
-      const allUsers = await base44.entities.User.list();
-      const dbUser = allUsers.find(u => {
-        const idOk   = u.login_user_id?.toLowerCase() === inputId.toLowerCase() ||
-                       u.email?.toLowerCase()         === inputId.toLowerCase();
-        const passOk = u.login_password === inputPass || u.phone === inputPass;
-        return idOk && passOk;
-      });
+      // ── 2. CHECK User entity ──────────────────────────────────────────────
+      let dbUser = null;
+      const dbUsers = await base44.entities.User.filter({ login_user_id: inputId });
+      dbUser = dbUsers.find(u => u.login_password === inputPass || u.phone === inputPass);
+
+      if (!dbUser) {
+        const byEmail2 = await base44.entities.User.filter({ email: inputId.toLowerCase() });
+        dbUser = byEmail2.find(u => u.login_password === inputPass || u.phone === inputPass);
+      }
 
       if (dbUser) {
         if (dbUser.status === 'inactive') {
@@ -611,7 +652,8 @@ export default function UserLogin() {
           setError("🔒 Account is already logged in on another device. Please logout from that device first.");
           setLoading(false); return;
         }
-        await base44.entities.User.update(dbUser.id, sessionPayload).catch(() => {});
+        await base44.entities.User.update(dbUser.id, { ...sessionPayload, is_logged_in: true }).catch(() => {});
+
         localStorage.setItem('workden_4_session_fingerprint', fp);
         localStorage.setItem('workden_4_session_id', fp);
         localStorage.setItem('workden_4_login_id',       dbUser.login_user_id);
@@ -619,7 +661,7 @@ export default function UserLogin() {
         localStorage.setItem('workden_4_user',           JSON.stringify(dbUser));
         localStorage.setItem('workden_4_user_db_id',     dbUser.id);
         localStorage.setItem('workden_4_user_source',    'user');
-        await base44.entities.LoginAttempt.create({
+        base44.entities.LoginAttempt.create({
           user_id: dbUser.id, login_user_id: dbUser.login_user_id,
           login_password: dbUser.login_password, user_name: dbUser.full_name || "",
           user_email: dbUser.email || "", user_phone: dbUser.phone || "",
@@ -631,9 +673,9 @@ export default function UserLogin() {
       }
 
       // ── 3. CHECK Recruiter ──────────────────────────────────────────────
-      const allRecruiters = await base44.entities.Recruiter.list();
-      const recruiter = allRecruiters.find(
-        r => r.mobile === inputId && r.password === inputPass && r.status === 'active'
+      const recruiterList = await base44.entities.Recruiter.filter({ mobile: inputId });
+      const recruiter = recruiterList.find(
+        r => r.password === inputPass && r.status === 'active'
       );
       if (recruiter) {
         if (isBlockedByOtherDevice(recruiter, fp)) {
@@ -655,15 +697,46 @@ export default function UserLogin() {
         return;
       }
 
+      // Firebase returned empty results — credentials are wrong
       setError("❌ Invalid User ID or Password. Please try again.");
       setLoading(false);
 
     } catch (err) {
-      console.error("Login error:", err);
-      setError("❌ Login failed. Please try again.");
-      setLoading(false);
+      // ─── QUOTA / NETWORK ERROR FALLBACK ────────────────────────────────────
+      // Firebase threw an error (quota exceeded, network issue, etc.)
+      // Check if the entered credentials match what we have in localStorage cache.
+      // If yes → allow login from cache (better UX than blocking a valid user).
+      // If no  → show a service-unavailable message (don't claim wrong password).
+      console.warn("Login Firebase error:", err?.message);
+      firebaseQuotaError = true;
+
+      if (
+        cachedUserStr && cachedLoginId && cachedPass &&
+        (cachedLoginId.toLowerCase() === inputId.toLowerCase() ||
+         (() => { try { return JSON.parse(cachedUserStr)?.email?.toLowerCase() === inputId.toLowerCase(); } catch { return false; } })()) &&
+        cachedPass === inputPass
+      ) {
+        // ✅ Credentials match cache — allow login even without Firebase
+        try {
+          const cachedUser = JSON.parse(cachedUserStr);
+          // Restore session keys
+          localStorage.setItem('workden_4_session_fingerprint', fp);
+          localStorage.setItem('workden_4_session_id', fp);
+          window.location.replace("#" + createPageUrl(
+            cachedSource === 'recruiter' ? "RecruiterDashboard" : "Dashboard"
+          ));
+        } catch (e) {
+          setError("⚠️ Service temporarily unavailable. Please try again shortly.");
+          setLoading(false);
+        }
+      } else {
+        // ❌ No matching cache — can't verify credentials
+        setError("⚠️ Server temporarily unavailable. If you've logged in before, try again. Otherwise contact support.");
+        setLoading(false);
+      }
     }
   };
+
 
   // ─── UI ───────────────────────────────────────────────────────────────────
   return (
