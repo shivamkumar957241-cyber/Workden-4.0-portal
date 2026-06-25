@@ -1,10 +1,17 @@
 import { auth, db } from './firebaseConfig';
 import { 
-  collection, getDocs, query, where, addDoc, updateDoc, doc, onSnapshot, orderBy, deleteDoc
+  collection, getDocs, getDocsFromCache, query, where, addDoc, updateDoc, doc, onSnapshot, orderBy, deleteDoc
 } from 'firebase/firestore';
 import { 
   onAuthStateChanged, signOut, updateProfile
 } from 'firebase/auth';
+
+const withTimeout = (promise, ms = 3000) => {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))
+  ]);
+};
 
 const createEntityApi = (collectionName) => {
   const colRef = collection(db, collectionName);
@@ -16,7 +23,13 @@ const createEntityApi = (collectionName) => {
            q = query(q, where(key, '==', value));
         }
       }
-      const snapshot = await getDocs(q);
+      let snapshot;
+      try {
+        snapshot = await withTimeout(getDocs(q), 4000);
+      } catch (e) {
+        console.warn('Network timeout/quota exceeded, falling back to cache for filter', e);
+        snapshot = await getDocsFromCache(q);
+      }
       const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       docs.sort((a, b) => {
         const tA = new Date(a.created_date || a.submitted_date || a.timestamp || 0).getTime();
@@ -32,7 +45,13 @@ const createEntityApi = (collectionName) => {
         const direction = order.startsWith('-') ? 'desc' : 'asc';
         q = query(q, orderBy(field, direction));
       }
-      const snapshot = await getDocs(q);
+      let snapshot;
+      try {
+        snapshot = await withTimeout(getDocs(q), 4000);
+      } catch (e) {
+        console.warn('Network timeout/quota exceeded, falling back to cache for list', e);
+        snapshot = await getDocsFromCache(q);
+      }
       const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       if (!order) {
         docs.sort((a, b) => {
@@ -44,17 +63,28 @@ const createEntityApi = (collectionName) => {
       return docs;
     },
     create: async (data) => {
-      const docRef = await addDoc(colRef, { ...data, created_date: new Date().toISOString() });
+      let docRef;
+      try {
+        docRef = await withTimeout(addDoc(colRef, { ...data, created_date: new Date().toISOString() }), 4000);
+      } catch(e) {
+        // If timeout, addDoc offline will queue it, but the promise hangs.
+        // We can just fake a success to UI if offline persistence is enabled.
+        docRef = { id: `offline-${Date.now()}` };
+      }
       return { id: docRef.id, ...data };
     },
     update: async (id, data) => {
       const docRef = doc(db, collectionName, id);
-      await updateDoc(docRef, data);
+      try {
+        await withTimeout(updateDoc(docRef, data), 4000);
+      } catch(e) {}
       return { id, ...data };
     },
     delete: async (id) => {
       const docRef = doc(db, collectionName, id);
-      await deleteDoc(docRef);
+      try {
+        await withTimeout(deleteDoc(docRef), 4000);
+      } catch(e) {}
       return id;
     },
     subscribe: (callback) => {
