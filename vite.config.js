@@ -4,10 +4,10 @@ import path from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: './',
+  base: '/',
   build: {
-    outDir: '../Workden4.0',
-    emptyOutDir: true
+    outDir: 'dist',
+    chunkSizeWarningLimit: 2000,
   },
   plugins: [
     react(),
