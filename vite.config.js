@@ -6,7 +6,7 @@ import path from 'path'
 export default defineConfig({
   base: './',
   build: {
-    outDir: '../Workden4.0',
+    outDir: 'dist',
     chunkSizeWarningLimit: 2000,
   },
   plugins: [
