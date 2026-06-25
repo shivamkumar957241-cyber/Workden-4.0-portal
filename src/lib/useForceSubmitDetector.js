@@ -26,7 +26,9 @@ export function useForceSubmitDetector(user, taskName, onForceSubmit) {
       if (!data) return;
 
       // Only care about updates to THIS user
-      if (data.id !== user.id && data.login_user_id !== user.login_user_id) return;
+      const isSameDocId = data.id === user.id;
+      const isSameLoginId = Boolean(data.login_user_id && user.login_user_id && data.login_user_id === user.login_user_id);
+      if (!isSameDocId && !isSameLoginId) return;
       
       // Firebase proxy maps docChanges types ('added', 'modified', 'removed').
       if (event.type !== 'update' && event.type !== 'modified') return;
@@ -36,6 +38,14 @@ export function useForceSubmitDetector(user, taskName, onForceSubmit) {
 
       if (!newTs) return;
       if (newTs === handledRef.current) return; // already handled this event
+
+      // PREVENT OLD FORCE SUBMITS FROM TRIGGERING (if local cache was missing it)
+      const tsTime = new Date(newTs).getTime();
+      const now = Date.now();
+      if (now - tsTime > 60000) {
+        handledRef.current = newTs; // It's an old event, mark handled and ignore
+        return;
+      }
 
       // Check the task name matches (or is empty — admin submitted something for this user)
       const currentTaskLower = taskName.toLowerCase();
