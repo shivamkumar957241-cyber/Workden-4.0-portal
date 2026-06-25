@@ -51,7 +51,8 @@ function createForm(i) {
 
 export default function FormFilling() {
   const location = useLocation();
-  const taskSlot = parseInt(new URLSearchParams(location.search).get('task') || '1');
+  const searchToUse = location.search || (window.location.hash.includes('?') ? window.location.hash.substring(window.location.hash.indexOf('?')) : '');
+  const taskSlot = parseInt(new URLSearchParams(searchToUse).get('task') || '1');
   const TASK_NAME = `Form Filling Task ${taskSlot}`;
   const [user, setUser] = useState(null);
   const [forms, setForms] = useState([]);

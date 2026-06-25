@@ -34,6 +34,7 @@ function getDeviceName() {
 
 // ─── GLOBAL LOGOUT UTILITY ────────────────────────────────────────────────────
 export async function performLogout() {
+  localStorage.setItem('workden_4_manual_logout', '1');
   try {
     const userSource  = localStorage.getItem('workden_4_user_source');
     const userId      = localStorage.getItem('workden_4_user_db_id');
@@ -48,7 +49,7 @@ export async function performLogout() {
   const keys = [
     'workden_4_login_id','workden_4_login_password','workden_4_user',
     'workden_4_user_db_id','workden_4_user_source','workden_4_session_fingerprint',
-    'workden_4_session_id','workden_4_recruiter_id'
+    'workden_4_session_id','workden_4_recruiter_id','workden_4_manual_logout'
   ];
   keys.forEach(k => localStorage.removeItem(k));
 }

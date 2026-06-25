@@ -19,6 +19,12 @@ export default function SessionWatcher() {
           if (docSnap.exists()) {
             const data = docSnap.data();
             if (data.is_logged_in === false) {
+              // Check if it's a manual logout
+              if (localStorage.getItem('workden_4_manual_logout')) {
+                // Let the manual logout process finish
+                return;
+              }
+
               // Forced logout!
               localStorage.removeItem('workden_4_login_id');
               localStorage.removeItem('workden_4_login_password');
