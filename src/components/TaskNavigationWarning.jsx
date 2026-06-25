@@ -38,34 +38,41 @@ export default function TaskNavigationWarning() {
   useEffect(() => {
     if (!isTaskActive) return;
 
+    const taskUrl = window.location.href;
+    
     // Push dummy state so back button fires popstate
-    window.history.pushState(null, '', window.location.href);
+    window.history.pushState(null, '', taskUrl);
 
-    // Intercept ALL clicks — catches both <a> and React Router <Link> (which renders as <a>)
+    const handlePopState = (e) => {
+      // The user clicked Back, URL changed. Force it back to the task URL!
+      window.history.pushState(null, '', taskUrl);
+      
+      pendingDest.current = '/Tasks'; // Default fallback if they lock
+      setShowWarning(true);
+    };
+
+    // Intercept ALL clicks — catches both <a> and React Router <Link>
     const handleClick = (e) => {
       if (!isActiveRef.current) return;
 
-      // Find the nearest anchor
       const link = e.target.closest('a');
       if (!link) return;
 
       const href = link.getAttribute('href') || '';
-
-      // Allow clicks with no real navigation, hash-only, or within task pages
       if (!href || href === '#' || href.startsWith('mailto') || href.startsWith('tel') || href.startsWith('upi')) return;
       if (isTaskPage(href)) return;
 
-      // It's navigation away from a task — intercept!
+      // Prevent native and React Router navigation
       e.preventDefault();
       e.stopPropagation();
+      
       pendingDest.current = href;
       setShowWarning(true);
     };
 
-    // Intercept keyboard shortcuts (Escape key especially)
+    // Intercept keyboard shortcuts (Alt+Left for back)
     const handleKeyDown = (e) => {
       if (!isActiveRef.current) return;
-      // Block Alt+Left (browser back), Alt+F4 hint via Escape handling
       if ((e.altKey && e.key === 'ArrowLeft') || (e.altKey && e.key === 'ArrowRight')) {
         e.preventDefault();
         pendingDest.current = '/Tasks';
@@ -73,10 +80,12 @@ export default function TaskNavigationWarning() {
       }
     };
 
+    window.addEventListener('popstate', handlePopState);
     document.addEventListener('click', handleClick, true);
     document.addEventListener('keydown', handleKeyDown, true);
 
     return () => {
+      window.removeEventListener('popstate', handlePopState);
       document.removeEventListener('click', handleClick, true);
       document.removeEventListener('keydown', handleKeyDown, true);
     };
